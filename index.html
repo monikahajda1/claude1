@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lista zadań</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>Moje zadania</h1>
+      <nav>
+        <ul id="category-list" class="category-list"></ul>
+      </nav>
+      <form id="category-form" class="category-form">
+        <input id="category-name" type="text" placeholder="Nowa kategoria" maxlength="40" required>
+        <input id="category-color" type="color" value="#4f7cff" title="Kolor kategorii">
+        <button type="submit" title="Dodaj kategorię">+</button>
+      </form>
+    </aside>
+
+    <main class="main">
+      <header class="main-header">
+        <h2 id="view-title">Wszystkie</h2>
+        <span id="counter" class="counter"></span>
+      </header>
+
+      <form id="task-form" class="task-form">
+        <input id="task-title" type="text" placeholder="Co jest do zrobienia?" maxlength="200" required>
+        <select id="task-category" title="Kategoria"></select>
+        <select id="task-priority" title="Priorytet">
+          <option value="low">Niski</option>
+          <option value="medium" selected>Średni</option>
+          <option value="high">Wysoki</option>
+        </select>
+        <input id="task-due" type="date" title="Termin">
+        <button type="submit">Dodaj</button>
+      </form>
+
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Szukaj…">
+        <div class="filters" role="group" aria-label="Status">
+          <button data-status="all" class="active">Wszystkie</button>
+          <button data-status="open">Do zrobienia</button>
+          <button data-status="done">Zrobione</button>
+        </div>
+        <button id="clear-done" class="link-btn">Usuń zrobione</button>
+      </div>
+
+      <ul id="task-list" class="task-list"></ul>
+      <p id="empty" class="empty" hidden>Brak zadań do wyświetlenia.</p>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
