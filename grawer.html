@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zdjęcie → wektor do graweru</title>
+<style>
+  :root {
+    --bg: #f6f1e7; --panel: #fffdf8; --ink: #2b2118; --muted: #7a6a58;
+    --line: #e2d6c2; --accent: #a0522d; --accent-ink: #fff;
+    --wood: #ead7b0; --burn: #4a2c14;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1c1712; --panel: #262019; --ink: #f1e8da; --muted: #b3a38e; --line: #3d342a; --accent: #d9875a; --accent-ink: #1c1712; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 14px 20px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  header h1 { font-size: 19px; margin: 0; }
+  header span { color: var(--muted); font-size: 13px; }
+  main { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100vh - 56px); }
+  aside { border-right: 1px solid var(--line); background: var(--panel); padding: 14px 16px 30px; overflow-y: auto; max-height: calc(100vh - 56px); }
+  section.view { padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 10px; margin: 0 0 12px; }
+  legend { font-weight: 600; font-size: 13px; padding: 0 4px; color: var(--accent); }
+  label.row { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; margin: 8px 0; font-size: 13.5px; }
+  label.row input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+  label.row output { color: var(--muted); font-variant-numeric: tabular-nums; }
+  label.check { display: flex; gap: 8px; align-items: center; margin: 8px 0; font-size: 13.5px; }
+  input[type=number], select { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; }
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .modes button { padding: 8px 4px; font-size: 12.5px; line-height: 1.2; }
+  button { cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 8px 12px; font: inherit; }
+  button.on, button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  .hint { font-size: 12.5px; color: var(--muted); margin: 4px 0 0; }
+  #drop { border: 2px dashed var(--line); border-radius: 12px; padding: 18px; text-align: center; cursor: pointer; color: var(--muted); }
+  #drop.over { border-color: var(--accent); color: var(--ink); }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .toolbar .spacer { flex: 1; }
+  #stats { font-size: 13px; color: var(--muted); }
+  .stage { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1; min-height: 0; }
+  .card { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 8px; display: flex; flex-direction: column; min-width: 0; }
+  .card h3 { margin: 2px 4px 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
+  .card .box { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 260px; overflow: auto; }
+  .card canvas, .card svg { max-width: 100%; max-height: 72vh; height: auto; display: block; }
+  #vecBox svg { box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+  .busy { opacity: .55; transition: opacity .1s; }
+  .layerpower { font-size: 12.5px; margin-top: 6px; display: grid; gap: 3px; }
+  .layerpower div { display: flex; gap: 8px; align-items: center; }
+  .sw { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #0003; flex: none; }
+  details { font-size: 13px; color: var(--muted); }
+  details summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+  details li { margin: 4px 0; }
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+    aside { max-height: none; border-right: 0; border-bottom: 1px solid var(--line); }
+    .stage { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Zdjęcie → wektor do graweru</h1>
+  <span>Wszystko dzieje się w Twojej przeglądarce — zdjęcia nigdzie nie są wysyłane.</span>
+</header>
+<main>
+<aside>
+  <div id="drop">
+    <strong>Kliknij lub upuść zdjęcie</strong><br><small>JPG, PNG, WEBP…</small>
+    <input id="file" type="file" accept="image/*" hidden>
+  </div>
+
+  <fieldset>
+    <legend>Tryb</legend>
+    <div class="modes">
+      <button data-mode="threshold" class="on">Sylwetka<br><small>czarno-białe</small></button>
+      <button data-mode="lines">Rysunek<br><small>kontury</small></button>
+      <button data-mode="layers">Warstwy<br><small>odcienie</small></button>
+    </div>
+    <p class="hint" id="modeHint"></p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Obraz</legend>
+    <label class="row">Szczegółowość <output id="o_res"></output><input id="res" type="range" min="200" max="1600" step="50" value="800"></label>
+    <label class="row">Jasność <output id="o_bri"></output><input id="bri" type="range" min="-100" max="100" value="0"></label>
+    <label class="row">Kontrast <output id="o_con"></output><input id="con" type="range" min="-50" max="150" value="0"></label>
+    <label class="row">Rozmycie (wygładza szum) <output id="o_blur"></output><input id="blur" type="range" min="0" max="6" step="0.25" value="1"></label>
+    <label class="check"><input id="inv" type="checkbox"> Odwróć (graweruj jasne miejsca)</label>
+  </fieldset>
+
+  <fieldset data-for="threshold">
+    <legend>Sylwetka</legend>
+    <label class="row">Próg <output id="o_thr"></output><input id="thr" type="range" min="1" max="254" value="128"></label>
+    <button id="auto" type="button">Ustaw próg automatycznie</button>
+  </fieldset>
+
+  <fieldset data-for="lines" hidden>
+    <legend>Rysunek</legend>
+    <label class="row">Grubość linii <output id="o_lw"></output><input id="lw" type="range" min="0.5" max="5" step="0.1" value="1.5"></label>
+    <label class="row">Ilość linii (czułość) <output id="o_sens"></output><input id="sens" type="range" min="1" max="40" value="20"></label>
+    <label class="row">Wypełnij najciemniejsze miejsca <output id="o_dark"></output><input id="dark" type="range" min="0" max="160" value="0"></label>
+  </fieldset>
+
+  <fieldset data-for="layers" hidden>
+    <legend>Warstwy</legend>
+    <label class="row">Liczba odcieni <output id="o_lev"></output><input id="lev" type="range" min="3" max="6" value="4"></label>
+    <label class="check"><input id="eq" type="checkbox" checked> Dopasuj odcienie do zdjęcia</label>
+    <div class="layerpower" id="layerLegend"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Czyszczenie i wygładzanie</legend>
+    <label class="row">Usuń drobne plamki <output id="o_speck"></output><input id="speck" type="range" min="0" max="400" step="2" value="20"></label>
+    <label class="row">Uproszczenie kształtów <output id="o_simp"></output><input id="simp" type="range" min="0.3" max="4" step="0.1" value="1"></label>
+    <label class="row">Narożniki ostre od kąta <output id="o_corner"></output><input id="corner" type="range" min="20" max="180" step="5" value="60"></label>
+    <label class="check"><input id="curves" type="checkbox" checked> Gładkie krzywe</label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Wymiary i eksport</legend>
+    <label class="row">Szerokość grafiki [mm]<span></span><input id="wmm" type="number" min="5" max="2000" step="1" value="150"></label>
+    <p class="hint" id="sizeInfo"></p>
+    <label class="check"><input id="frame" type="checkbox"> Dodaj obrys do wycięcia (czerwona linia)</label>
+    <label class="row" data-frame hidden>Margines ramki [mm]<span></span><input id="margin" type="number" min="0" max="200" step="1" value="5"></label>
+    <label class="row" data-frame hidden>Zaokrąglenie rogów [mm]<span></span><input id="radius" type="number" min="0" max="200" step="1" value="3"></label>
+  </fieldset>
+
+  <details>
+    <summary>Wskazówki do sklejki brzozowej</summary>
+    <ul>
+      <li>Najczytelniejsze są zdjęcia z mocnym kontrastem i prostym tłem — tło najlepiej usunąć wcześniej.</li>
+      <li><b>Sylwetka</b> sprawdza się przy logo, napisach, zwierzętach, roślinach. <b>Rysunek</b> — przy portretach i budynkach (wygląda jak szkic piórkiem).</li>
+      <li><b>Warstwy</b> mają różne kolory: w LightBurn każdemu kolorowi daj inną moc/prędkość (najciemniejszy = największa moc).</li>
+      <li>Nie przesadzaj ze szczegółami: elementy cieńsze niż ~0,3 mm na sklejce się „zlewają”. Zwiększ „Usuń drobne plamki”.</li>
+      <li>Linie wypełniaj w programie lasera trybem <i>Fill</i> (np. 0,1 mm odstępu linii), obrys ramki trybem <i>Line</i> (cięcie).</li>
+      <li>Zawsze zrób próbkę mocy na ścinku tej samej sklejki — brzoza ma jasne i ciemniejsze słoje.</li>
+    </ul>
+  </details>
+</aside>
+
+<section class="view">
+  <div class="toolbar">
+    <button id="dlSvg" class="primary" disabled>Pobierz SVG</button>
+    <button id="dlDxf" disabled>Pobierz DXF</button>
+    <label class="check" style="margin:0 6px"><input id="woodBg" type="checkbox" checked> Podgląd na sklejce</label>
+    <span class="spacer"></span>
+    <span id="stats">Wgraj zdjęcie, aby zacząć.</span>
+  </div>
+  <div class="stage">
+    <div class="card"><h3>Obraz po obróbce (to zostanie obrysowane)</h3><div class="box"><canvas id="bmp" width="10" height="10"></canvas></div></div>
+    <div class="card"><h3>Wynik wektorowy</h3><div class="box" id="vecBox"></div></div>
+  </div>
+</section>
+</main>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const state = { img: null, mode: "threshold", result: null, name: "grawer" };
+
+/* ---------- Kolory ---------- */
+// Kolory eksportu — w LightBurn każdy kolor = osobna warstwa z własną mocą.
+const EXPORT_COLORS = ["#000000", "#0000FF", "#00A000", "#FF8000", "#A000FF"];
+const FRAME_COLOR = "#FF0000";
+const MODE_HINTS = {
+  threshold: "Każdy piksel jest albo grawerowany, albo nie. Najlepsze do logo, napisów, wyraźnych sylwetek.",
+  lines: "Wydobywa krawędzie i zamienia zdjęcie w rysunek liniowy. Dobre do portretów i architektury.",
+  layers: "Dzieli zdjęcie na kilka odcieni. Każdy odcień to osobny kolor = osobna moc lasera."
+};
+
+/* ---------- UI ---------- */
+const sliders = {
+  res: v => v + " px", bri: v => v, con: v => v, blur: v => v,
+  thr: v => v, lw: v => v, sens: v => v, dark: v => (+v ? v : "wył."),
+  lev: v => v, speck: v => v + " px²", simp: v => v, corner: v => v + "°"
+};
+for (const [id, fmt] of Object.entries(sliders)) {
+  const el = $(id), out = $("o_" + id);
+  const upd = () => { out.textContent = fmt(el.value); };
+  el.addEventListener("input", () => { upd(); schedule(); });
+  upd();
+}
+for (const id of ["inv", "eq", "curves", "wmm", "frame", "margin", "radius", "woodBg"]) {
+  $(id).addEventListener("input", () => {
+    document.querySelectorAll("[data-frame]").forEach(e => e.hidden = !$("frame").checked);
+    schedule(["wmm", "frame", "margin", "radius", "woodBg"].includes(id));
+  });
+}
+document.querySelectorAll(".modes button").forEach(b => b.addEventListener("click", () => {
+  state.mode = b.dataset.mode;
+  document.querySelectorAll(".modes button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll("fieldset[data-for]").forEach(f => f.hidden = f.dataset.for !== state.mode);
+  $("modeHint").textContent = MODE_HINTS[state.mode];
+  schedule();
+}));
+$("modeHint").textContent = MODE_HINTS.threshold;
+
+const drop = $("drop"), file = $("file");
+drop.addEventListener("click", () => file.click());
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); });
+file.addEventListener("change", () => file.files[0] && load(file.files[0]));
+
+function load(f) {
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = () => {
+    state.img = img;
+    state.name = (f.name || "grawer").replace(/\.[^.]+$/, "") || "grawer";
+    drop.innerHTML = `<strong>${escapeHtml(f.name)}</strong><br><small>${img.naturalWidth}×${img.naturalHeight} px — kliknij, by zmienić</small>`;
+    drop.appendChild(file);
+    state.gray = null;
+    autoThreshold(true);
+    schedule();
+  };
+  img.onerror = () => alert("Nie udało się wczytać tego pliku jako obrazu.");
+  img.src = url;
+}
+const escapeHtml = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+let timer = 0, svgOnly = false;
+function schedule(onlyOutput = false) {
+  svgOnly = svgOnly || onlyOutput;
+  if (!onlyOutput) svgOnly = false;
+  clearTimeout(timer);
+  document.querySelector(".stage").classList.add("busy");
+  timer = setTimeout(() => {
+    try { svgOnly && state.result ? renderOutput() : run(); }
+    finally { svgOnly = false; document.querySelector(".stage").classList.remove("busy"); }
+  }, 120);
+}
+
+/* ---------- Przetwarzanie obrazu ---------- */
+function getGray() {
+  const img = state.img, W = +$("res").value;
+  const scale = Math.min(1, W / img.naturalWidth) || 1;
+  const w = Math.max(1, Math.round(img.naturalWidth * scale)), h = Math.max(1, Math.round(img.naturalHeight * scale));
+  const key = w + "x" + h;
+  if (state.gray && state.gray.key === key) return state.gray;
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);          // przezroczystość = białe tło
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, w, h);
+  const d = ctx.getImageData(0, 0, w, h).data, g = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) g[i] = 0.299 * d[4 * i] + 0.587 * d[4 * i + 1] + 0.114 * d[4 * i + 2];
+  return state.gray = { key, w, h, g };
+}
+
+function gaussBlur(src, w, h, sigma) {
+  if (sigma < 0.2) return src.slice();
+  const r = Math.ceil(sigma * 3), k = new Float32Array(2 * r + 1);
+  let sum = 0;
+  for (let i = -r; i <= r; i++) sum += k[i + r] = Math.exp(-(i * i) / (2 * sigma * sigma));
+  for (let i = 0; i < k.length; i++) k[i] /= sum;
+  const tmp = new Float32Array(w * h), out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    for (let x = 0; x < w; x++) {
+      let s = 0;
+      for (let i = -r; i <= r; i++) { const xx = x + i < 0 ? 0 : x + i >= w ? w - 1 : x + i; s += src[row + xx] * k[i + r]; }
+      tmp[row + x] = s;
+    }
+  }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    let s = 0;
+    for (let i = -r; i <= r; i++) { const yy = y + i < 0 ? 0 : y + i >= h ? h - 1 : y + i; s += tmp[yy * w + x] * k[i + r]; }
+    out[y * w + x] = s;
+  }
+  return out;
+}
+
+function adjusted() {
+  const { w, h, g } = getGray();
+  const b = +$("bri").value, c = +$("con").value, inv = $("inv").checked;
+  const f = c >= 0 ? 1 + c / 50 : 1 + c / 60;
+  let a = new Float32Array(w * h);
+  for (let i = 0; i < a.length; i++) {
+    let v = (g[i] - 128) * f + 128 + b;
+    v = v < 0 ? 0 : v > 255 ? 255 : v;
+    a[i] = inv ? 255 - v : v;
+  }
+  a = gaussBlur(a, w, h, +$("blur").value);
+  return { w, h, a };
+}
+
+function otsu(a) {
+  const hist = new Float64Array(256);
+  for (const v of a) hist[v | 0]++;
+  let total = a.length, sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * hist[i];
+  let sB = 0, wB = 0, best = 0, t = 128;
+  for (let i = 0; i < 256; i++) {
+    wB += hist[i]; if (!wB) continue;
+    const wF = total - wB; if (!wF) break;
+    sB += i * hist[i];
+    const mB = sB / wB, mF = (sum - sB) / wF, v = wB * wF * (mB - mF) ** 2;
+    if (v > best) { best = v; t = i; }
+  }
+  return t;
+}
+function autoThreshold(silent) {
+  if (!state.img) return;
+  const t = Math.min(254, Math.max(1, otsu(adjusted().a)));
+  $("thr").value = t; $("o_thr").textContent = t;
+  if (!silent) schedule();
+}
+$("auto").addEventListener("click", () => autoThreshold(false));
+
+// Zwraca listę warstw: { mask: Uint8Array, tone: 0..1 (0 = najciemniejsza) }
+function buildLayers() {
+  const { w, h, a } = adjusted();
+  const n = w * h, layers = [];
+  if (state.mode === "threshold") {
+    const t = +$("thr").value, m = new Uint8Array(n);
+    for (let i = 0; i < n; i++) m[i] = a[i] < t ? 1 : 0;
+    layers.push({ mask: m, tone: 0 });
+  } else if (state.mode === "lines") {
+    const s = +$("lw").value, sens = +$("sens").value, dark = +$("dark").value;
+    const g1 = gaussBlur(a, w, h, s), g2 = gaussBlur(a, w, h, s * 1.6);
+    const thr = 42 - sens, m = new Uint8Array(n);
+    for (let i = 0; i < n; i++) m[i] = (g1[i] - g2[i] < -thr * 0.35 || a[i] < dark) ? 1 : 0;
+    layers.push({ mask: m, tone: 0 });
+  } else {
+    const L = +$("lev").value, cuts = [];
+    if ($("eq").checked) {               // progi wg kwantyli – każdy odcień zajmuje podobną powierzchnię
+      const sorted = Float32Array.from(a).sort();
+      for (let k = 1; k < L; k++) cuts.push(sorted[Math.floor(sorted.length * k / L)]);
+    } else for (let k = 1; k < L; k++) cuts.push(255 * k / L);
+    for (let k = 0; k < L - 1; k++) {   // najjaśniejszy odcień = czyste drewno
+      const lo = k ? cuts[k - 1] : -1, hi = cuts[k], m = new Uint8Array(n);
+      for (let i = 0; i < n; i++) m[i] = a[i] > lo && a[i] <= hi ? 1 : 0;
+      layers.push({ mask: m, tone: k / (L - 1) });
+    }
+  }
+  return { w, h, layers };
+}
+
+/* ---------- Obrysowywanie (bitmapa → kontury) ---------- */
+function trace(mask, w, h) {
+  const W1 = w + 1, nV = W1 * (h + 1);
+  const outA = new Int8Array(nV).fill(-1), outB = new Int8Array(nV).fill(-1);
+  const add = (v, d) => { if (outA[v] < 0) outA[v] = d; else outB[v] = d; };
+  const on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && mask[y * w + x] === 1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (!mask[y * w + x]) continue;
+    if (!on(x, y - 1)) add(y * W1 + x, 0);
+    if (!on(x + 1, y)) add(y * W1 + x + 1, 1);
+    if (!on(x, y + 1)) add((y + 1) * W1 + x + 1, 2);
+    if (!on(x - 1, y)) add((y + 1) * W1 + x, 3);
+  }
+  const DV = [1, W1, -1, -W1], loops = [];
+  for (let v0 = 0; v0 < nV; v0++) {
+    while (outA[v0] >= 0 || outB[v0] >= 0) {
+      let d;
+      if (outA[v0] >= 0) { d = outA[v0]; outA[v0] = -1; } else { d = outB[v0]; outB[v0] = -1; }
+      const pts = []; let v = v0, prev = -1, guard = 0;
+      for (;;) {
+        if (d !== prev) pts.push([v % W1, (v / W1) | 0]);
+        prev = d; v += DV[d];
+        if (v === v0 || ++guard > 4 * nV) break;
+        const a = outA[v], b = outB[v];
+        if (b < 0) { d = a; outA[v] = -1; }
+        else { const pref = (d + 3) & 3; if (a === pref) { d = a; outA[v] = b; outB[v] = -1; } else { d = b; outB[v] = -1; } }
+        if (d < 0) break;
+      }
+      if (pts.length >= 3) loops.push(pts);
+    }
+  }
+  return loops;
+}
+
+const area = p => { let s = 0; for (let i = 0, j = p.length - 1; i < p.length; j = i++) s += (p[j][0] + p[i][0]) * (p[j][1] - p[i][1]); return s / 2; };
+
+function rdp(pts, eps) {
+  const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
+  const stack = [[0, pts.length - 1]];
+  while (stack.length) {
+    const [s, e] = stack.pop();
+    const [x1, y1] = pts[s], [x2, y2] = pts[e], dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+    let md = 0, mi = -1;
+    for (let i = s + 1; i < e; i++) {
+      const d = Math.abs(dy * pts[i][0] - dx * pts[i][1] + x2 * y1 - y2 * x1) / L;
+      if (d > md) { md = d; mi = i; }
+    }
+    if (md > eps) { keep[mi] = 1; stack.push([s, mi], [mi, e]); }
+  }
+  return pts.filter((_, i) => keep[i]);
+}
+function simplifyClosed(p, eps) {
+  if (p.length < 5) return p;
+  let far = 0, fd = -1;
+  for (let i = 1; i < p.length; i++) { const d = (p[i][0] - p[0][0]) ** 2 + (p[i][1] - p[0][1]) ** 2; if (d > fd) { fd = d; far = i; } }
+  const a = rdp(p.slice(0, far + 1), eps), b = rdp(p.slice(far).concat([p[0]]), eps);
+  const r = a.concat(b.slice(1, -1));
+  return r.length >= 3 ? r : p;
+}
+
+// Zamienia wielokąt na listę segmentów: {type:'L'|'C', pts}
+function toSegments(poly, curves, cornerDeg) {
+  const n = poly.length, segs = [];
+  if (!curves) { for (let i = 0; i < n; i++) segs.push({ t: "L", p: [poly[(i + 1) % n]] }); return segs; }
+  const cosT = Math.cos(cornerDeg * Math.PI / 180), corner = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = poly[(i - 1 + n) % n], b = poly[i], c = poly[(i + 1) % n];
+    const ux = b[0] - a[0], uy = b[1] - a[1], vx = c[0] - b[0], vy = c[1] - b[1];
+    const cos = (ux * vx + uy * vy) / ((Math.hypot(ux, uy) * Math.hypot(vx, vy)) || 1);
+    corner[i] = cornerDeg < 180 && cos < cosT ? 1 : 0;
+  }
+  const tangent = (i, len) => {   // wektor styczny ograniczony do połowy długości odcinka
+    const a = poly[(i - 1 + n) % n], c = poly[(i + 1) % n];
+    let tx = (c[0] - a[0]) / 6, ty = (c[1] - a[1]) / 6;
+    const tl = Math.hypot(tx, ty), lim = len * 0.5;
+    if (tl > lim && tl > 0) { tx *= lim / tl; ty *= lim / tl; }
+    return [tx, ty];
+  };
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n, p1 = poly[i], p2 = poly[j];
+    if (corner[i] && corner[j]) { segs.push({ t: "L", p: [p2] }); continue; }
+    const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+    let c1, c2;
+    if (corner[i]) c1 = [p1[0] + (p2[0] - p1[0]) / 3, p1[1] + (p2[1] - p1[1]) / 3];
+    else { const t = tangent(i, len); c1 = [p1[0] + t[0], p1[1] + t[1]]; }
+    if (corner[j]) c2 = [p2[0] - (p2[0] - p1[0]) / 3, p2[1] - (p2[1] - p1[1]) / 3];
+    else { const t = tangent(j, len); c2 = [p2[0] - t[0], p2[1] - t[1]]; }
+    segs.push({ t: "C", p: [c1, c2, p2] });
+  }
+  return segs;
+}
+
+function run() {
+  if (!state.img) return;
+  const t0 = performance.now();
+  const { w, h, layers } = buildLayers();
+  drawBitmap(w, h, layers);
+  const minA = +$("speck").value, eps = +$("simp").value, curves = $("curves").checked, corner = +$("corner").value;
+  let nodes = 0, shapes = 0;
+  const out = layers.map(L => {
+    const loops = [];
+    for (const raw of trace(L.mask, w, h)) {
+      if (Math.abs(area(raw)) < Math.max(1, minA)) continue;
+      const poly = simplifyClosed(raw, eps);
+      if (poly.length < 3) continue;
+      loops.push({ start: poly[0], segs: toSegments(poly, curves, corner) });
+      nodes += poly.length; shapes++;
+    }
+    return { tone: L.tone, loops };
+  });
+  state.result = { w, h, layers: out, nodes, shapes, ms: performance.now() - t0 };
+  renderOutput();
+}
+
+function drawBitmap(w, h, layers) {
+  const c = $("bmp"); c.width = w; c.height = h;
+  const ctx = c.getContext("2d"), id = ctx.createImageData(w, h), d = id.data;
+  const wood = [234, 215, 176], burn = [74, 44, 20];
+  for (let i = 0; i < w * h; i++) { d[4 * i] = wood[0]; d[4 * i + 1] = wood[1]; d[4 * i + 2] = wood[2]; d[4 * i + 3] = 255; }
+  for (const L of layers) {
+    const k = 1 - L.tone * 0.75;
+    const col = wood.map((v, j) => Math.round(v + (burn[j] - v) * k));
+    for (let i = 0; i < w * h; i++) if (L.mask[i]) { d[4 * i] = col[0]; d[4 * i + 1] = col[1]; d[4 * i + 2] = col[2]; }
+  }
+  ctx.putImageData(id, 0, 0);
+}
+
+/* ---------- Wyjście: SVG / DXF ---------- */
+function geometry() {
+  const r = state.result, wmm = Math.max(1, +$("wmm").value || 100);
+  const s = wmm / r.w, hmm = r.h * s;
+  const frame = $("frame").checked, m = frame ? Math.max(0, +$("margin").value || 0) : 0;
+  return { r, s, wmm, hmm, m, frame, rad: Math.max(0, +$("radius").value || 0), W: wmm + 2 * m, H: hmm + 2 * m };
+}
+const fmt = v => (Math.round(v * 100) / 100).toString();
+
+function buildSVG(preview) {
+  const g = geometry(), { r, s, m } = g;
+  const X = p => fmt(p[0] * s + m) + " " + fmt(p[1] * s + m);
+  const wood = [234, 215, 176], burn = [74, 44, 20];
+  let body = "";
+  r.layers.forEach((L, idx) => {
+    if (!L.loops.length) return;
+    let d = "";
+    for (const lp of L.loops) {
+      d += "M" + X(lp.start);
+      for (const sg of lp.segs) d += sg.t === "L" ? "L" + X(sg.p[0]) : "C" + sg.p.map(X).join(" ");
+      d += "Z";
+    }
+    let fill;
+    if (preview) { const k = 1 - L.tone * 0.75; fill = "rgb(" + wood.map((v, j) => Math.round(v + (burn[j] - v) * k)).join(",") + ")"; }
+    else fill = EXPORT_COLORS[idx % EXPORT_COLORS.length];
+    body += `<path id="warstwa-${idx + 1}" fill="${fill}" fill-rule="evenodd" stroke="none" d="${d}"/>\n`;
+  });
+  if (g.frame) {
+    const rr = Math.min(g.rad, g.W / 2, g.H / 2);
+    body += `<rect id="ciecie" x="0.05" y="0.05" width="${fmt(g.W - 0.1)}" height="${fmt(g.H - 0.1)}" rx="${fmt(rr)}" fill="none" stroke="${FRAME_COLOR}" stroke-width="${preview ? 0.4 : 0.1}"/>\n`;
+  }
+  const bg = preview && $("woodBg").checked ? `<rect width="100%" height="100%" fill="#ead7b0"/>\n` : preview ? `<rect width="100%" height="100%" fill="#fff"/>\n` : "";
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" width="${fmt(g.W)}mm" height="${fmt(g.H)}mm" viewBox="0 0 ${fmt(g.W)} ${fmt(g.H)}">\n${bg}${body}</svg>\n`;
+}
+
+function buildDXF() {
+  const g = geometry(), { r, s, m } = g, H = g.H;
+  const P = p => [p[0] * s + m, H - (p[1] * s + m)];   // DXF: oś Y w górę
+  const lines = ["0", "SECTION", "2", "HEADER", "9", "$INSUNITS", "70", "4", "0", "ENDSEC", "0", "SECTION", "2", "ENTITIES"];
+  const poly = (pts, layer, color) => {
+    lines.push("0", "POLYLINE", "8", layer, "62", String(color), "66", "1", "70", "1", "10", "0", "20", "0", "30", "0");
+    for (const [x, y] of pts) lines.push("0", "VERTEX", "8", layer, "10", x.toFixed(3), "20", y.toFixed(3), "30", "0");
+    lines.push("0", "SEQEND", "8", layer);
+  };
+  const ACI = [7, 5, 3, 30, 6];
+  r.layers.forEach((L, idx) => {
+    for (const lp of L.loops) {
+      const pts = [P(lp.start)]; let cur = lp.start;
+      for (const sg of lp.segs) {
+        if (sg.t === "L") pts.push(P(sg.p[0]));
+        else {
+          const [c1, c2, e] = sg.p;
+          for (let k = 1; k <= 8; k++) {
+            const t = k / 8, u = 1 - t;
+            pts.push(P([u * u * u * cur[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * e[0],
+                        u * u * u * cur[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * e[1]]));
+          }
+        }
+        cur = sg.p[sg.p.length - 1];
+      }
+      pts.pop();
+      poly(pts, "GRAWER_" + (idx + 1), ACI[idx % ACI.length]);
+    }
+  });
+  if (g.frame) poly([[0, 0], [g.W, 0], [g.W, g.H], [0, g.H]], "CIECIE", 1);
+  lines.push("0", "ENDSEC", "0", "EOF");
+  return lines.join("\n") + "\n";
+}
+
+function renderOutput() {
+  const r = state.result; if (!r) return;
+  $("vecBox").innerHTML = buildSVG(true).replace(/^<\?xml[^>]*>\s*/, "");
+  const g = geometry();
+  $("sizeInfo").textContent = `Wymiar pliku: ${fmt(g.W)} × ${fmt(g.H)} mm` + (g.frame ? ` (grafika ${fmt(g.wmm)} × ${fmt(g.hmm)} mm)` : "");
+  $("stats").textContent = `${r.shapes} kształtów · ${r.nodes} węzłów · ${Math.round(r.ms)} ms`;
+  $("dlSvg").disabled = $("dlDxf").disabled = !r.shapes;
+  const leg = $("layerLegend"); leg.innerHTML = "";
+  if (state.mode === "layers") r.layers.forEach((L, i) => {
+    const pct = Math.round(100 - L.tone * 60);
+    leg.insertAdjacentHTML("beforeend", `<div><span class="sw" style="background:${EXPORT_COLORS[i]}"></span>Warstwa ${i + 1} — sugerowana moc ok. ${pct}% najciemniejszej</div>`);
+  });
+}
+
+function download(text, name, type) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+$("dlSvg").addEventListener("click", () => download(buildSVG(false), state.name + "-grawer.svg", "image/svg+xml"));
+$("dlDxf").addEventListener("click", () => download(buildDXF(), state.name + "-grawer.dxf", "application/dxf"));
+</script>
+</body>
+</html>
