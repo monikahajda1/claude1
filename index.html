@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Zdjęcie → wektor do graweru</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#a0522d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Grawer">
 <style>
   :root {
     --bg: #f6f1e7; --panel: #fffdf8; --ink: #2b2118; --muted: #7a6a58;
@@ -63,6 +69,7 @@
 <header>
   <h1>Zdjęcie → wektor do graweru</h1>
   <span>Wszystko dzieje się w Twojej przeglądarce — zdjęcia nigdzie nie są wysyłane.</span>
+  <button id="install" class="primary" hidden style="margin-left:auto">Zainstaluj aplikację</button>
 </header>
 <main>
 <aside>
@@ -557,6 +564,18 @@ function download(text, name, type) {
 }
 $("dlSvg").addEventListener("click", () => download(buildSVG(false), state.name + "-grawer.svg", "image/svg+xml"));
 $("dlDxf").addEventListener("click", () => download(buildDXF(), state.name + "-grawer.dxf", "application/dxf"));
+
+/* ---------- Aplikacja (PWA): praca offline i instalacja ---------- */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+let installPrompt = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installPrompt = e; $("install").hidden = false; });
+$("install").addEventListener("click", async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt(); await installPrompt.userChoice; installPrompt = null; $("install").hidden = true;
+});
+window.addEventListener("appinstalled", () => { $("install").hidden = true; });
 </script>
 </body>
 </html>
