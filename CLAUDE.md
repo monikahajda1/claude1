@@ -59,8 +59,8 @@ docs/              instrukcje dla użytkowniczki
 - Tylko aktywni pracownicy / sprzęt.
 
 ## Plan etapów
-1. ✅ (do akceptacji) Instalacja, logowanie i role, lista budów z etapami, BHP (pracownicy, sprzęt, daty ważności), „Co dziś?”.
-2. Oferty: kalkulator (m² × system, gruntowanie, cokoliki…), oferta z szablonu Word, statusy, follow-up (7 dni), statystyki skuteczności.
+1. ✅ ZAAKCEPTOWANY (warunkowo – skrypty .bat nie były jeszcze testowane na Windowsie; poprawki zgłoszone później naprawiać w dowolnym momencie) Instalacja, logowanie i role, lista budów z etapami, BHP (pracownicy, sprzęt, daty ważności), „Co dziś?”.
+2. ⏳ W TRAKCIE – Oferty: kalkulator (m² × system, gruntowanie, cokoliki…), oferta z szablonu Word, statusy, follow-up (7 dni), statystyki skuteczności.
 3. Umowa: wygrana oferta → budowa.
 4. Wejście na budowę: IBWR i KZM z szablonów, checklista „czego brakuje” per budowa.
 5. Rozliczenia miesięczne: m² w miesiącu, % zaawansowania, kwota do faktury, protokół odbioru częściowego.
