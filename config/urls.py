@@ -13,6 +13,8 @@ urlpatterns = [
     path("konto/", include("apps.konta.urls")),
     path("budowy/", include("apps.budowy.urls")),
     path("bhp/", include("apps.bhp.urls")),
+    path("oferty/", include("apps.oferty.urls")),
+    path("szablony/", include("apps.szablony.urls")),
     path("system/", include("apps.core.urls")),
     path("admin/", admin.site.urls),
     # PWA

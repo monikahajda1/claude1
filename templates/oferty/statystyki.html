@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% load pomocnicze %}
+{% block tytul %}Statystyki ofert{% endblock %}
+{% block tresc %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 mb-0">Statystyki ofert {{ rok }}</h1>
+  <form class="d-flex gap-2" method="get">
+    <select class="form-select" name="rok" onchange="this.form.submit()">{% for r in lata %}<option value="{{ r }}" {% if r == rok %}selected{% endif %}>{{ r }}</option>{% endfor %}</select>
+    <select class="form-select" name="kto" onchange="this.form.submit()"><option value="">— wszyscy —</option>{% for h in handlowcy_lista %}<option value="{{ h.pk }}" {% if kto == h.pk|stringformat:"s" %}selected{% endif %}>{{ h }}</option>{% endfor %}</select>
+  </form>
+</div>
+<p class="text-muted small">Liczone z aktualnych wersji ofert według daty wystawienia. <strong>Skuteczność</strong> = wygrane ÷ (wygrane + przegrane) – oferty jeszcze w toku nie obniżają wyniku. Wartości netto (dla wygranych – wariant wybrany przez klienta).</p>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="card kafelek"><div class="card-body"><div class="liczba">{{ razem.wyslane }}</div><div class="text-muted">ofert wysłanych</div><small class="text-muted">{{ razem.w_wyslane|zl }}</small></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kafelek"><div class="card-body"><div class="liczba text-success">{{ razem.wygrane }}</div><div class="text-muted">wygranych</div><small class="text-muted">{{ razem.w_wygrane|zl }}</small></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kafelek"><div class="card-body"><div class="liczba text-primary">{% if razem.skutecznosc is not None %}{{ razem.skutecznosc|floatformat:"0" }}%{% else %}—{% endif %}</div><div class="text-muted">skuteczność (liczba)</div><small class="text-muted">wartościowo: {% if razem.skutecznosc_wartosciowa is not None %}{{ razem.skutecznosc_wartosciowa|floatformat:"0" }}%{% else %}—{% endif %}</small></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card kafelek"><div class="card-body"><div class="liczba text-secondary">{{ sredni_czas|default_if_none:"—" }}</div><div class="text-muted">dni średnio od wysłania do decyzji</div><small class="text-muted">w toku: {{ razem.w_toku }}</small></div></div></div>
+</div>
+
+<h2 class="h5">Miesiące</h2>
+<div class="table-responsive-md"><table class="table table-sm bg-white responsywna">
+  {% include "oferty/_naglowek_stat.html" with pierwsza="Miesiąc" %}
+  <tbody>{% for nazwa, l in miesiace %}{% if l.wyslane %}{% include "oferty/_wiersz_stat.html" %}{% endif %}{% endfor %}</tbody>
+</table></div>
+
+<h2 class="h5 mt-4">Handlowcy</h2>
+<div class="table-responsive-md"><table class="table table-sm bg-white responsywna">
+  {% include "oferty/_naglowek_stat.html" with pierwsza="Handlowiec" %}
+  <tbody>{% for nazwa, l in handlowcy %}{% if l.wyslane %}{% include "oferty/_wiersz_stat.html" %}{% endif %}{% endfor %}</tbody>
+</table></div>
+
+<h2 class="h5 mt-4">Systemy posadzek</h2>
+<div class="table-responsive-md"><table class="table table-sm bg-white responsywna">
+  {% include "oferty/_naglowek_stat.html" with pierwsza="System (najdroższa pozycja systemu w ofercie)" %}
+  <tbody>{% for nazwa, l in systemy %}{% if l.wyslane %}{% include "oferty/_wiersz_stat.html" %}{% endif %}{% endfor %}</tbody>
+</table></div>
+
+<h2 class="h5 mt-4">Dlaczego przegrywamy?</h2>
+{% if powody %}
+<table class="table table-sm bg-white responsywna" style="max-width:40rem">
+  <thead><tr><th>Powód</th><th class="text-end">Liczba</th><th class="text-end">Wartość</th></tr></thead>
+  <tbody>{% for p in powody %}<tr><td>{{ p.nazwa }}</td><td class="text-end" data-etykieta="Liczba">{{ p.liczba }}</td><td class="text-end" data-etykieta="Wartość">{{ p.wartosc|zl }}</td></tr>{% endfor %}</tbody>
+</table>
+{% else %}<p class="text-muted">Brak przegranych ofert w tym okresie.</p>{% endif %}
+{% endblock %}

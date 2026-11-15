@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block tytul %}{% if object %}Edycja: {{ object.pelny_numer }}{% else %}Nowa oferta{% endif %}{% endblock %}
+{% block tresc %}
+<h1 class="h3">{% if object %}Edycja: {{ object.pelny_numer }}{% else %}Nowa oferta{% endif %}</h1>
+{% if not object %}<p class="text-muted">Krok 1 z 2: dane ogólne. W następnym kroku dodasz pozycje kalkulacji.</p>{% endif %}
+<div class="card"><div class="card-body">
+<form method="post">{% csrf_token %}
+  {% include "_pola.html" %}
+  {% if not object %}<p class="form-text mt-3">Klienta nie ma na liście? <a href="{% url 'budowy:klient_nowy' %}" target="_blank">Dodaj klienta</a> (otworzy się w nowej karcie), potem odśwież tę stronę.</p>{% endif %}
+  <div class="mt-4 d-flex gap-2">
+    <button class="btn btn-firmowy" type="submit">{% if object %}Zapisz{% else %}Dalej – kalkulacja ›{% endif %}</button>
+    <a class="btn btn-outline-secondary" href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'oferty:lista' %}{% endif %}">Anuluj</a>
+  </div>
+</form>
+</div></div>
+{% endblock %}

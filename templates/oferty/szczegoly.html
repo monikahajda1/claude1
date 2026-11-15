@@ -1,0 +1,153 @@
+{% extends "base.html" %}{% load pomocnicze %}
+{% block tytul %}{{ object.pelny_numer }}{% endblock %}
+{% block tresc %}
+{% with o=object %}
+<a href="{% url 'oferty:lista' %}" class="small">‹ Wszystkie oferty</a>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">{{ o.nazwa }}</h1>
+    <span class="text-muted">{{ o.pelny_numer }} · {{ o.klient }}</span>
+    <span class="badge text-bg-{{ o.kolor_statusu }}">{{ o.get_status_display }}</span>
+    {% if not o.aktualna %}<span class="badge text-bg-secondary">wersja archiwalna</span>{% endif %}
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-primary" href="{% url 'oferty:dokument' o.pk %}">⬇ Pobierz ofertę (Word)</a>
+    {% if edytuje %}<a class="btn btn-outline-secondary" href="{% url 'oferty:edytuj' o.pk %}">Edytuj dane</a>{% endif %}
+  </div>
+</div>
+
+{% if not o.aktualna %}
+<div class="alert alert-secondary">To jest starsza wersja oferty. {% for w in wersje %}{% if w.aktualna %}Aktualna: <a href="{{ w.get_absolute_url }}">{{ w.pelny_numer }}</a>{% endif %}{% endfor %}</div>
+{% endif %}
+
+{# --- Najważniejsze akcje zależne od statusu --- #}
+{% if edytuje and o.aktualna %}
+<div class="card mb-3 border-start border-4 border-{{ o.kolor_statusu }}"><div class="card-body">
+  {% if o.status == "robocza" %}
+    <p class="mb-2">Oferta jest <strong>robocza</strong>. Sprawdź kalkulację, pobierz plik Word, wyślij go klientowi (np. z Outlooka) i kliknij:</p>
+    <form method="post" action="{% url 'oferty:wyslana' o.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-firmowy">✉ Oznacz jako wysłaną</button></form>
+  {% elif o.otwarta %}
+    <div class="d-flex flex-wrap justify-content-between gap-2 align-items-center mb-2">
+      <span>Wysłana {{ o.data_wyslania|date:"d.m.Y" }} · ważna do {{ o.wazna_do|date:"d.m.Y" }}
+        {% if o.nastepny_kontakt %} · <strong>następny kontakt: {{ o.nastepny_kontakt|date:"d.m.Y" }}</strong>{% endif %}</span>
+      <span class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-firmowy" data-bs-toggle="collapse" data-bs-target="#kontakt">📞 Zapisz kontakt</button>
+        <button class="btn btn-outline-dark" data-bs-toggle="collapse" data-bs-target="#rozstrzygnij">Wygrana / przegrana</button>
+        <form method="post" action="{% url 'oferty:nowa_wersja' o.pk %}" onsubmit="return confirm('Utworzyć nową wersję oferty (np. po negocjacjach)? Obecna zostanie w archiwum.')">{% csrf_token %}<button class="btn btn-outline-secondary">Nowa wersja</button></form>
+      </span>
+    </div>
+    <div class="collapse" id="kontakt"><form method="post" action="{% url 'oferty:kontakt' o.pk %}" class="border-top pt-3">{% csrf_token %}
+      {% with form=kontakt_form %}{% include "_pola.html" %}{% endwith %}
+      <button class="btn btn-firmowy mt-3">Zapisz kontakt</button></form></div>
+    <div class="collapse" id="rozstrzygnij"><form method="post" action="{% url 'oferty:rozstrzygnij' o.pk %}" class="border-top pt-3">{% csrf_token %}
+      {% with f=rozstrzygniecie_form %}
+      <div class="mb-3">{% for r in f.wynik %}<div class="form-check form-check-inline">{{ r.tag }}<label class="form-check-label" for="{{ r.id_for_label }}">{{ r.choice_label }}</label></div>{% endfor %}</div>
+      <div class="row g-3">
+        <div class="col-md-4" data-pokaz="wygrana"><label class="form-label">{{ f.wariant.label|capfirst }}</label>{{ f.wariant }}</div>
+        <div class="col-md-4" data-pokaz="przegrana"><label class="form-label">{{ f.powod_przegranej.label|capfirst }}</label>{{ f.powod_przegranej }}</div>
+        <div class="col-md-4" data-pokaz="przegrana"><label class="form-label">{{ f.powod_opis.label|capfirst }}</label>{{ f.powod_opis }}</div>
+      </div>
+      {% endwith %}
+      <button class="btn btn-dark mt-3">Zapisz wynik</button></form></div>
+  {% else %}
+    <div class="d-flex flex-wrap justify-content-between gap-2 align-items-center">
+      <span>{{ o.get_status_display }} {{ o.data_rozstrzygniecia|date:"d.m.Y" }}{% if o.powod_przegranej %} – powód: <strong>{{ o.get_powod_przegranej_display }}</strong>{% if o.powod_opis %} ({{ o.powod_opis }}){% endif %}{% endif %}
+        {% if o.status == "wygrana" %}<br><small class="text-muted">W etapie 3 tutaj pojawi się przycisk „Utwórz budowę z oferty”.</small>{% endif %}</span>
+      <form method="post" action="{% url 'oferty:przywroc' o.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">Cofnij – przywróć do negocjacji</button></form>
+    </div>
+  {% endif %}
+</div></div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    {% for w, s in warianty %}
+    <div class="card mb-3 {% if w.wybrany %}border border-success border-2{% endif %}"><div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <h2 class="h5 mb-0">{{ w.nazwa }} {% if w.wybrany %}<span class="badge text-bg-success">wybrany przez klienta</span>{% endif %}</h2>
+        {% if edytuje and mozna_zmieniac_pozycje %}<span class="d-flex gap-2">
+          <a class="btn btn-sm btn-firmowy" href="{% url 'oferty:wariant' o.pk w.pk %}">✎ Kalkulacja</a>
+          {% if warianty|length > 1 %}<form method="post" action="{% url 'oferty:wariant_usun' o.pk w.pk %}" onsubmit="return confirm('Usunąć {{ w.nazwa }}?')">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Usuń</button></form>{% endif %}
+        </span>{% endif %}
+      </div>
+      {% if w.opis %}<p class="text-muted">{{ w.opis }}</p>{% endif %}
+      <div class="table-responsive"><table class="table table-sm mb-2">
+        <thead><tr><th>Pozycja</th><th class="text-end">Ilość</th><th class="text-end">Cena</th><th class="text-end">Wartość</th></tr></thead>
+        <tbody>
+        {% for p in w.pozycje.all %}
+          <tr><td>{{ p.nazwa }}{% if p.opis %}<br><small class="text-muted">{{ p.opis|truncatechars:90 }}</small>{% endif %}</td>
+            <td class="text-end text-nowrap">{{ p.ilosc|floatformat:"-2" }} {{ p.get_jednostka_display }}</td>
+            <td class="text-end text-nowrap">{{ p.cena_netto|zl }}</td><td class="text-end text-nowrap">{{ p.wartosc|zl }}</td></tr>
+        {% empty %}<tr><td colspan="4" class="text-muted">Brak pozycji.{% if edytuje and mozna_zmieniac_pozycje %} <a href="{% url 'oferty:wariant' o.pk w.pk %}">Dodaj pozycje</a>{% endif %}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      <dl class="row mb-0 small text-end">
+        {% if o.rabat_procent %}<dt class="col-8">Suma przed rabatem</dt><dd class="col-4">{{ s.przed_rabatem|zl }}</dd>
+        <dt class="col-8">Rabat {{ o.rabat_procent|floatformat:"-2" }}%</dt><dd class="col-4">−{{ s.rabat|zl }}</dd>{% endif %}
+        <dt class="col-8">Razem netto</dt><dd class="col-4 fw-bold">{{ s.netto|zl }}</dd>
+        <dt class="col-8">VAT {{ o.vat_procent }}%</dt><dd class="col-4">{{ s.vat|zl }}</dd>
+        <dt class="col-8">Razem brutto</dt><dd class="col-4 fw-bold">{{ s.brutto|zl }}</dd>
+        {% if s.marza is not None %}<dt class="col-8 text-muted">Marża (tylko wewnętrznie)</dt><dd class="col-4 text-muted">{{ s.marza|zl }} ({{ s.marza_procent|floatformat:"-1" }}%)</dd>{% endif %}
+      </dl>
+    </div></div>
+    {% endfor %}
+    {% if edytuje and mozna_zmieniac_pozycje %}
+    <form method="post" action="{% url 'oferty:wariant_dodaj' o.pk %}" class="d-flex flex-wrap gap-2 mb-3">{% csrf_token %}
+      <button class="btn btn-outline-primary" name="kopiuj" value="">+ Pusty wariant</button>
+      {% for w, s in warianty %}<button class="btn btn-outline-primary" name="kopiuj" value="{{ w.pk }}">+ Kopia: {{ w.nazwa }}</button>{% endfor %}
+    </form>
+    {% elif edytuje and o.aktualna and o.status != "robocza" %}
+    <p class="small text-muted">Oferta została wysłana – aby zmienić pozycje lub ceny, użyj przycisku „Nowa wersja”.</p>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3"><div class="card-body">
+      <h2 class="h6 text-muted">Dane oferty</h2>
+      <dl class="row mb-0 small">
+        <dt class="col-5">Klient</dt><dd class="col-7"><a href="{% url 'budowy:klient_edytuj' o.klient.pk %}">{{ o.klient }}</a>{% if o.klient.osoba_kontaktowa %}<br>{{ o.klient.osoba_kontaktowa }}{% endif %}{% if o.klient.telefon %}<br><a href="tel:{{ o.klient.telefon }}">{{ o.klient.telefon }}</a>{% endif %}</dd>
+        <dt class="col-5">Adres budowy</dt><dd class="col-7">{% if o.adres_budowy or o.miasto %}{{ o.adres_budowy }}{% if o.adres_budowy and o.miasto %}, {% endif %}{{ o.miasto }}{% else %}—{% endif %}</dd>
+        <dt class="col-5">Powierzchnia</dt><dd class="col-7">{% if o.powierzchnia_m2 %}{{ o.powierzchnia_m2|floatformat:"-2" }} m²{% else %}—{% endif %}</dd>
+        <dt class="col-5">Handlowiec</dt><dd class="col-7">{{ o.handlowiec|default:"—" }}</dd>
+        <dt class="col-5">Wystawiona</dt><dd class="col-7">{{ o.data_wystawienia|date:"d.m.Y" }}</dd>
+        <dt class="col-5">Ważna</dt><dd class="col-7">{{ o.waznosc_dni }} dni{% if o.data_wyslania %} (do {{ o.wazna_do|date:"d.m.Y" }}){% endif %}</dd>
+        <dt class="col-5">Termin realizacji</dt><dd class="col-7">{{ o.termin_realizacji|default:"—" }}</dd>
+        <dt class="col-5">Płatność</dt><dd class="col-7">{{ o.warunki_platnosci|default:"—" }}</dd>
+      </dl>
+      {% if o.uwagi %}<hr><p class="small mb-0" style="white-space:pre-line"><strong>Uwagi:</strong> {{ o.uwagi }}</p>{% endif %}
+      {% if o.notatki_wewnetrzne %}<hr><p class="small mb-0 text-muted" style="white-space:pre-line"><strong>Notatki wewnętrzne:</strong> {{ o.notatki_wewnetrzne }}</p>{% endif %}
+    </div></div>
+
+    <div class="card mb-3"><div class="card-body">
+      <h2 class="h6 text-muted">Kontakty z klientem</h2>
+      {% for k in kontakty %}
+      <div class="border-bottom py-1 small"><strong>{{ k.data|date:"d.m.Y" }}</strong> · {{ k.get_forma_display }} · <span class="text-muted">{{ k.kto|default:"" }}</span><br>{{ k.notatka }}</div>
+      {% empty %}<p class="small text-muted mb-0">Brak zapisanych kontaktów.</p>{% endfor %}
+    </div></div>
+
+    {% if wersje|length > 1 %}
+    <div class="card mb-3"><div class="card-body">
+      <h2 class="h6 text-muted">Wersje oferty</h2>
+      {% for w in wersje %}<div class="small">{% if w.pk == o.pk %}<strong>{{ w.pelny_numer }}</strong>{% else %}<a href="{{ w.get_absolute_url }}">{{ w.pelny_numer }}</a>{% endif %} · {{ w.data_wystawienia|date:"d.m.Y" }} · {{ w.get_status_display }}</div>{% endfor %}
+    </div></div>
+    {% endif %}
+  </div>
+</div>
+{% include "_historia.html" %}
+{% endwith %}
+{% endblock %}
+{% block skrypty %}
+<script>
+// Formularz wyniku: pokazuj tylko pola pasujące do wybranego wyniku.
+(function () {
+  var radia = document.querySelectorAll('input[name="wynik"]');
+  function odswiez() {
+    var wybor = (document.querySelector('input[name="wynik"]:checked') || {}).value;
+    document.querySelectorAll("[data-pokaz]").forEach(function (el) { el.style.display = el.dataset.pokaz === wybor ? "" : "none"; });
+  }
+  radia.forEach(function (r) { r.classList.add("form-check-input"); r.addEventListener("change", odswiez); });
+  odswiez();
+})();
+</script>
+{% endblock %}

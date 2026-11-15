@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block tytul %}{% if object %}{{ object.nazwa }}{% else %}Nowa pozycja cennika{% endif %}{% endblock %}
+{% block tresc %}
+<a href="{% url 'oferty:cennik' %}" class="small">‹ Cennik</a>
+<h1 class="h3">{% if object %}{{ object.nazwa }}{% else %}Nowa pozycja cennika{% endif %}</h1>
+<div class="card"><div class="card-body">
+<form method="post">{% csrf_token %}
+  {% include "_pola.html" %}
+  <div class="mt-4 d-flex gap-2">
+    <button class="btn btn-firmowy" type="submit">Zapisz</button>
+    <a class="btn btn-outline-secondary" href="{% url 'oferty:cennik' %}">Anuluj</a>
+  </div>
+  {% if object %}<p class="form-text mt-3">Pozycji nie usuwamy (mogą być w starych ofertach) – jeśli już jej nie oferujesz, odznacz „aktywna”.</p>{% endif %}
+</form>
+</div></div>
+{% endblock %}

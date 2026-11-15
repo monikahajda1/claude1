@@ -1,0 +1,12 @@
+{% load pomocnicze %}
+<tr>
+  <td>{{ nazwa }}</td>
+  <td class="text-end" data-etykieta="Wysłane">{{ l.wyslane }}</td>
+  <td class="text-end" data-etykieta="Wygrane">{{ l.wygrane }}</td>
+  <td class="text-end" data-etykieta="Przegrane">{{ l.przegrane }}</td>
+  <td class="text-end" data-etykieta="W toku">{{ l.w_toku }}</td>
+  <td class="text-end fw-semibold" data-etykieta="Skuteczność">{% if l.skutecznosc is not None %}{{ l.skutecznosc|floatformat:"0" }}%{% else %}—{% endif %}</td>
+  <td class="text-end text-nowrap" data-etykieta="Wartość wysłanych">{{ l.w_wyslane|zl }}</td>
+  <td class="text-end text-nowrap" data-etykieta="Wartość wygranych">{{ l.w_wygrane|zl }}</td>
+  <td class="text-end" data-etykieta="Skuteczność wartościowa">{% if l.skutecznosc_wartosciowa is not None %}{{ l.skutecznosc_wartosciowa|floatformat:"0" }}%{% else %}—{% endif %}</td>
+</tr>

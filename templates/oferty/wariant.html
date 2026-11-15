@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block tytul %}Kalkulacja: {{ oferta.pelny_numer }}{% endblock %}
+{% block tresc %}
+<a href="{{ oferta.get_absolute_url }}" class="small">‹ {{ oferta.pelny_numer }} {{ oferta.nazwa }}</a>
+<h1 class="h4 mb-3">Kalkulacja – {{ wariant.nazwa }}</h1>
+<form method="post" id="kalkulator">{% csrf_token %}
+  {{ formset.management_form }}
+  {% if formset.non_form_errors %}<div class="alert alert-danger">{{ formset.non_form_errors|join:" " }}</div>{% endif %}
+  <div class="card mb-3"><div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-4"><label class="form-label">Nazwa wariantu</label>{{ wform.nazwa }}</div>
+      <div class="col-md-8"><label class="form-label">Opis wariantu (opcjonalnie)</label>{{ wform.opis }}</div>
+    </div>
+  </div></div>
+
+  <div class="card mb-3 bg-light"><div class="card-body py-2">
+    <div class="row g-2 align-items-end">
+      <div class="col-6 col-md-3"><label class="form-label small mb-0">Powierzchnia [m²]</label>
+        <input class="form-control" name="powierzchnia_m2" id="powierzchnia" inputmode="decimal" value="{{ oferta.powierzchnia_m2|default_if_none:''|stringformat:'s' }}"></div>
+      <div class="col-6 col-md-4"><button type="button" class="btn btn-outline-primary w-100" id="wstaw-m2">Wstaw m² do pozycji w m²</button></div>
+      <div class="col-md-5 small text-muted">Szybko: wpisz powierzchnię i kliknij – ilość uzupełni się we wszystkich pozycjach liczonych w m² (system, gruntowanie, szlifowanie…).</div>
+    </div>
+  </div></div>
+
+  <div id="pozycje">
+    {% for f in formset.forms %}{% include "oferty/_wiersz_pozycji.html" %}{% endfor %}
+  </div>
+  <template id="wzor-pozycji">{% with f=formset.empty_form %}{% include "oferty/_wiersz_pozycji.html" %}{% endwith %}</template>
+  <button type="button" class="btn btn-outline-primary mb-3" id="dodaj">+ Dodaj pozycję</button>
+
+  <div class="card mb-3 sticky-bottom shadow"><div class="card-body py-2">
+    <div class="row text-end small g-1 align-items-center">
+      <div class="col-6 col-md-2">Suma: <strong id="s-suma">0,00</strong></div>
+      <div class="col-6 col-md-2">Rabat {{ oferta.rabat_procent|floatformat:"-2" }}%: <strong id="s-rabat">0,00</strong></div>
+      <div class="col-6 col-md-2">Netto: <strong id="s-netto" class="fs-6">0,00</strong></div>
+      <div class="col-6 col-md-2">Brutto ({{ oferta.vat_procent }}%): <strong id="s-brutto">0,00</strong></div>
+      <div class="col-12 col-md-2 text-muted">Marża: <span id="s-marza">—</span></div>
+      <div class="col-12 col-md-2 d-flex gap-1 justify-content-end">
+        <button class="btn btn-outline-secondary btn-sm" name="zostan" value="1">Zapisz</button>
+        <button class="btn btn-firmowy btn-sm">Zapisz i zakończ</button>
+      </div>
+    </div>
+  </div></div>
+</form>
+{{ cennik_json|json_script:"dane-cennika" }}
+{{ ustawienia_json|json_script:"dane-oferty" }}
+{% endblock %}
+{% block skrypty %}
+<script>
+(function () {
+  var cennik = JSON.parse(document.getElementById("dane-cennika").textContent);
+  var oferta = JSON.parse(document.getElementById("dane-oferty").textContent);
+  var kontener = document.getElementById("pozycje");
+  var total = document.getElementById("id_pozycje-TOTAL_FORMS");
+  function liczba(v) { var n = parseFloat(String(v || "").replace(/\s/g, "").replace(",", ".")); return isNaN(n) ? 0 : n; }
+  function zl(n) { return n.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function pole(w, nazwa) { return w.querySelector('[name$="-' + nazwa + '"]'); }
+
+  function przelicz() {
+    var suma = 0, koszt = 0, pelnyKoszt = true, ile = 0;
+    kontener.querySelectorAll("[data-wiersz]").forEach(function (w) {
+      if (pole(w, "DELETE").checked) return;
+      var wart = Math.round(liczba(pole(w, "ilosc").value) * liczba(pole(w, "cena_netto").value) * 100) / 100;
+      w.querySelector("[data-wartosc]").textContent = zl(wart);
+      suma += wart; ile++;
+      var c = cennik[pole(w, "pozycja_cennika").value];
+      if (c && c.koszt !== null) koszt += liczba(pole(w, "ilosc").value) * liczba(c.koszt); else pelnyKoszt = false;
+    });
+    var rabat = Math.round(suma * liczba(oferta.rabat)) / 100;
+    var netto = suma - rabat, brutto = netto + Math.round(netto * oferta.vat) / 100;
+    document.getElementById("s-suma").textContent = zl(suma);
+    document.getElementById("s-rabat").textContent = "−" + zl(rabat);
+    document.getElementById("s-netto").textContent = zl(netto);
+    document.getElementById("s-brutto").textContent = zl(brutto);
+    document.getElementById("s-marza").textContent = (pelnyKoszt && ile && netto) ? zl(netto - koszt) + " (" + ((netto - koszt) / netto * 100).toFixed(1).replace(".", ",") + "%)" : "—";
+  }
+
+  function podlacz(w) {
+    pole(w, "pozycja_cennika").addEventListener("change", function () {
+      var c = cennik[this.value];
+      if (!c) return;
+      pole(w, "nazwa").value = c.nazwa;
+      pole(w, "jednostka").value = c.jednostka;
+      pole(w, "cena_netto").value = c.cena;
+      pole(w, "opis").value = c.opis;
+      if (c.opis) w.querySelector("details").open = true;
+      if (c.jednostka === "m2" && !liczba(pole(w, "ilosc").value) && liczba(document.getElementById("powierzchnia").value))
+        pole(w, "ilosc").value = document.getElementById("powierzchnia").value;
+      przelicz();
+    });
+    w.querySelector("[data-usun]").addEventListener("click", function () {
+      pole(w, "DELETE").checked = true;
+      w.style.display = "none";
+      przelicz();
+    });
+    w.addEventListener("input", przelicz);
+  }
+
+  kontener.querySelectorAll("[data-wiersz]").forEach(podlacz);
+  document.getElementById("dodaj").addEventListener("click", function () {
+    var html = document.getElementById("wzor-pozycji").innerHTML.replace(/__prefix__/g, total.value);
+    var tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    var w = tmp.firstElementChild;
+    kontener.appendChild(w);
+    total.value = parseInt(total.value, 10) + 1;
+    podlacz(w);
+    pole(w, "pozycja_cennika").focus();
+  });
+  document.getElementById("wstaw-m2").addEventListener("click", function () {
+    var m2 = document.getElementById("powierzchnia").value;
+    if (!liczba(m2)) { alert("Najpierw wpisz powierzchnię."); return; }
+    kontener.querySelectorAll("[data-wiersz]").forEach(function (w) {
+      if (pole(w, "jednostka").value === "m2" && !pole(w, "DELETE").checked) pole(w, "ilosc").value = m2;
+    });
+    przelicz();
+  });
+  if (!kontener.querySelector("[data-wiersz]")) document.getElementById("dodaj").click();
+  przelicz();
+})();
+</script>
+{% endblock %}

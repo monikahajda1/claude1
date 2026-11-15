@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% load pomocnicze %}
+{% block tytul %}Cennik{% endblock %}
+{% block tresc %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 mb-0">Cennik</h1>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="?pokaz={% if pokaz == 'wszystkie' %}{% else %}wszystkie{% endif %}">{% if pokaz == "wszystkie" %}Tylko aktywne{% else %}Pokaż też nieaktywne{% endif %}</a>
+    {% if edytuje.cennik %}<a class="btn btn-firmowy" href="{% url 'oferty:cennik_nowa' %}">+ Nowa pozycja</a>{% endif %}
+  </div>
+</div>
+<p class="text-muted small">Ceny z cennika podstawiają się w kalkulatorze ofert. Zmiana ceny nie zmienia ofert już utworzonych.{% if not edytuje.cennik %} Cennik zmienia administrator.{% endif %}</p>
+{% for grupa, pozycje in grupy %}{% if pozycje %}
+<h2 class="h5 mt-3">{{ grupa }}</h2>
+<table class="table table-hover bg-white responsywna">
+  <thead><tr><th>Nazwa</th><th>Jedn.</th><th class="text-end">Cena netto</th><th class="text-end">Koszt</th><th class="text-end">Marża</th></tr></thead>
+  <tbody>
+  {% for p in pozycje %}
+  <tr class="{% if not p.aktywna %}text-muted{% endif %}">
+    <td>{% if edytuje.cennik %}<a class="fw-semibold" href="{% url 'oferty:cennik_edytuj' p.pk %}">{{ p.nazwa }}</a>{% else %}<strong>{{ p.nazwa }}</strong>{% endif %}{% if not p.aktywna %} <span class="badge text-bg-secondary">nieaktywna</span>{% endif %}
+      {% if p.opis %}<br><small class="text-muted">{{ p.opis|truncatechars:100 }}</small>{% endif %}</td>
+    <td data-etykieta="Jednostka">{{ p.get_jednostka_display }}</td>
+    <td data-etykieta="Cena" class="text-end text-nowrap">{{ p.cena_netto|zl }}</td>
+    <td data-etykieta="Koszt" class="text-end text-nowrap">{{ p.koszt|zl }}</td>
+    <td data-etykieta="Marża" class="text-end text-nowrap">{% if p.marza_procent is not None %}{{ p.marza_procent|floatformat:"-1" }}%{% else %}—{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}{% endfor %}
+{% endblock %}

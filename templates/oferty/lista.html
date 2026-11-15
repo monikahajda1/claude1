@@ -1,0 +1,42 @@
+{% extends "base.html" %}{% load pomocnicze %}
+{% block tytul %}Oferty{% endblock %}
+{% block tresc %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 mb-0">Oferty</h1>
+  {% if edytuje.oferty %}<a class="btn btn-firmowy" href="{% url 'oferty:nowa' %}">+ Nowa oferta</a>{% endif %}
+</div>
+<ul class="nav nav-pills mb-3 flex-nowrap overflow-auto">
+  {% for kod, nazwa, ile in widoki %}
+  <li class="nav-item"><a class="nav-link text-nowrap {% if widok == kod %}active{% endif %}" href="?widok={{ kod }}&kto={{ kto }}">{{ nazwa }} <span class="badge text-bg-light">{{ ile }}</span></a></li>
+  {% endfor %}
+</ul>
+<form class="row g-2 mb-3" method="get">
+  <input type="hidden" name="widok" value="{{ widok }}">
+  <div class="col-md-6"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Szukaj: numer, inwestycja, klient, miasto…"></div>
+  <div class="col-8 col-md-4"><select class="form-select" name="kto">
+    <option value="">— wszyscy handlowcy —</option>
+    <option value="moje" {% if kto == "moje" %}selected{% endif %}>Tylko moje</option>
+    {% for h in handlowcy %}<option value="{{ h.pk }}" {% if kto == h.pk|stringformat:"s" %}selected{% endif %}>{{ h }}</option>{% endfor %}
+  </select></div>
+  <div class="col-4 col-md-2"><button class="btn btn-outline-secondary w-100">Filtruj</button></div>
+</form>
+{% if object_list %}
+<table class="table table-hover bg-white responsywna tabela-karty">
+  <thead><tr><th>Numer</th><th>Inwestycja</th><th>Klient</th><th>Status</th><th class="text-end">Netto</th><th>Następny kontakt</th><th>Handlowiec</th></tr></thead>
+  <tbody>
+  {% for o in object_list %}
+  <tr>
+    <td data-etykieta="Numer" class="text-nowrap">{{ o.pelny_numer }}<br><small class="text-muted">{{ o.data_wystawienia|date:"d.m.Y" }}</small></td>
+    <td><a class="fw-semibold" href="{{ o.get_absolute_url }}">{{ o.nazwa }}</a>{% if o.miasto %}<br><small class="text-muted">{{ o.miasto }}</small>{% endif %}</td>
+    <td data-etykieta="Klient">{{ o.klient }}</td>
+    <td><span class="badge text-bg-{{ o.kolor_statusu }}">{{ o.get_status_display }}</span>{% if o.warianty.all|length > 1 %} <small class="text-muted">{{ o.warianty.all|length }} warianty</small>{% endif %}</td>
+    <td data-etykieta="Netto" class="text-end text-nowrap">{{ o.wartosc_netto|zl }}</td>
+    <td data-etykieta="Kontakt">{% if o.otwarta and o.nastepny_kontakt %}<span class="{% if o.nastepny_kontakt <= dzis %}text-danger fw-semibold{% endif %}">{{ o.nastepny_kontakt|date:"d.m.Y" }}</span>{% else %}—{% endif %}</td>
+    <td data-etykieta="Handlowiec">{{ o.handlowiec|default:"—" }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% include "_paginacja.html" %}
+{% else %}<p class="text-muted">Brak ofert spełniających kryteria.</p>{% endif %}
+{% endblock %}
