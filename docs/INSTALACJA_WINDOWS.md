@@ -111,6 +111,12 @@ Kierownikowi przypisujesz budowy w edycji budowy (pole „kierownik robót”).
 **Rodzaje dokumentów BHP** (badania, szkolenia, przeglądy): **Administracja → Typy dokumentów**.
 Możesz dodać nowe, oznaczyć jako „wymagany zawsze” i ustawić typowy okres ważności.
 
+**Cennik:** menu **Więcej → Cennik**. Wpisz swoje prawdziwe ceny dopiero po usunięciu danych testowych.
+Pole „koszt własny” jest opcjonalne – służy tylko do liczenia marży, nigdy nie trafia do oferty dla klienta.
+
+**Własny szablon oferty (Word):** menu **Więcej → Szablon oferty (Word)** – tam jest instrukcja krok po kroku,
+wzór do pobrania i lista wszystkich pól.
+
 ---
 
 ## Na przyszłość: dostęp z telefonu na budowie (Tailscale) – NIE rób tego teraz

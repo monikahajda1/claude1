@@ -39,7 +39,12 @@ config/            ustawienia, adresy URL
 apps/konta/        model Uzytkownik (AUTH_USER_MODEL), role, uprawnienia.py ← JEDYNE miejsce reguł dostępu
 apps/budowy/       Klient, Budowa (etapy w Etap, numeracja B/RRRR/NNN), przypisanie ekipy i sprzętu
 apps/bhp/          TypDokumentu (słownik), Pracownik, Sprzet, DokumentPracownika/Sprzetu, terminy.py, alerty.py
-apps/pulpit/       ekran „Co dziś?” (zadania.py – alerty budów)
+apps/pulpit/       ekran „Co dziś?” (zadania.py – alerty budów i przypomnienia o ofertach)
+apps/oferty/       PozycjaCennika, Oferta (numer OF/RRRR/NNNN + wersje /v2), Wariant, PozycjaOferty, Kontakt;
+                   operacje.py (wysłanie, kontakt, wynik, nowa wersja), dokument.py (pola do Worda),
+                   statystyki.py, dane_testowe.py (fikcyjny cennik i oferty)
+apps/szablony/     SzablonDokumentu (własne .docx wgrywane w adminie), generator.py (docxtpl),
+                   pola.py (rejestr przykładowych danych/opisów pól), wbudowane/ (wzory + skrypt tworzący wzór)
 apps/core/         wspólne: mixiny uprawnień, formularze, PWA, ochrona plików, dziennik, komenda dane_testowe
 templates/         szablony HTML (po polsku)
 *.bat, skrypty/    skrypty dla Windows (start, stop, kopia, przywracanie, testy, dane testowe)
@@ -53,6 +58,15 @@ docs/              instrukcje dla użytkowniczki
 - Widoki dziedziczą po `ModulMixin` (`modul=...`, `edycja=True/False`); budowy zawsze filtruj przez `budowy_dla(user)`.
 - Panel `/admin/` – zarządzanie kontami i słownikami (tylko administrator z `is_staff`).
 
+## Oferty – zasady
+- Status: robocza → wysłana → negocjacje → wygrana/przegrana (+ anulowana). Przy przegranej obowiązkowy powód.
+- Pozycje można zmieniać tylko w ofercie roboczej; po wysłaniu – „Nowa wersja” (kopia, poprzednia `aktualna=False`).
+- Rabat % i VAT wspólne dla oferty, sumy liczone per wariant (`Wariant.podsumowanie`). Kalkulator w JS liczy tak samo.
+- Koszt/marża tylko wewnętrznie – NIGDY w kontekście dokumentu Word.
+- Wysłanie → `nastepny_kontakt` = +7 dni; zaległe kontakty i kończąca się ważność → „Co dziś?”.
+- Statystyki tylko z aktualnych wersji; skuteczność = wygrane / (wygrane + przegrane).
+- Nowy rodzaj dokumentu Word: dodaj do `szablony.models.Rodzaj`, wzór do `wbudowane/`, wpis w `szablony/pola.py`.
+
 ## Alerty BHP
 - Progi z `.env`: `ALERT_DNI_OSTRZEZENIE` (30), `ALERT_DNI_PILNE` (7).
 - Liczy się **najnowszy** dokument danego rodzaju; wymagany (`TypDokumentu.wymagany`) a brakujący → alert „brak dokumentu”.
@@ -60,7 +74,7 @@ docs/              instrukcje dla użytkowniczki
 
 ## Plan etapów
 1. ✅ ZAAKCEPTOWANY (warunkowo – skrypty .bat nie były jeszcze testowane na Windowsie; poprawki zgłoszone później naprawiać w dowolnym momencie) Instalacja, logowanie i role, lista budów z etapami, BHP (pracownicy, sprzęt, daty ważności), „Co dziś?”.
-2. ⏳ W TRAKCIE – Oferty: kalkulator (m² × system, gruntowanie, cokoliki…), oferta z szablonu Word, statusy, follow-up (7 dni), statystyki skuteczności.
+2. ✅ (do akceptacji) Oferty: kalkulator (m² × system, gruntowanie, cokoliki…), oferta z szablonu Word, statusy, follow-up (7 dni), statystyki skuteczności.
 3. Umowa: wygrana oferta → budowa.
 4. Wejście na budowę: IBWR i KZM z szablonów, checklista „czego brakuje” per budowa.
 5. Rozliczenia miesięczne: m² w miesiącu, % zaawansowania, kwota do faktury, protokół odbioru częściowego.

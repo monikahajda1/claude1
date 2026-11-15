@@ -18,6 +18,13 @@ Skrót (gdy wszystko jest już zainstalowane):
 - Ekran „Co dziś?” z alertami (wygasłe, brakujące, wygasające w ciągu 7 i 30 dni; terminy budów)
 - Kopie zapasowe i przywracanie jednym kliknięciem; wygląd na telefonie; przygotowanie jako PWA
 
+## Etap 2 – oferty
+- Cennik (systemy posadzek, przygotowanie podłoża, pozycje dodatkowe) z opcjonalnym kosztem do liczenia marży
+- Kalkulator ofert z wariantami, rabatem, VAT; szybkie wstawianie m²; działa na telefonie
+- Oferta jako plik Word z szablonu (wbudowany wzór albo własny – Więcej → Szablon oferty)
+- Statusy, wersje po negocjacjach, notatki z kontaktów, przypomnienia po 7 dniach na „Co dziś?”
+- Statystyki skuteczności: miesiące, handlowcy, systemy, powody przegranych
+
 Opis techniczny projektu i zasad: [CLAUDE.md](CLAUDE.md)
 
 Wszystkie dane w repozytorium są **fikcyjne**.
