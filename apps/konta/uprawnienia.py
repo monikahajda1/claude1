@@ -26,6 +26,8 @@ MACIERZ = {
     "klienci": ({ADMINISTRATOR, HANDLOWIEC}, {ADMINISTRATOR, HANDLOWIEC}),
     "bhp": ({ADMINISTRATOR, BHP}, {ADMINISTRATOR, BHP}),
     "oferty": ({ADMINISTRATOR, HANDLOWIEC}, {ADMINISTRATOR, HANDLOWIEC}),
+    # Umowy, zakres prac z cenami, aneksy. Kierownik – podgląd tylko swoich budów (filtr budowy_dla).
+    "umowy": ({ADMINISTRATOR, HANDLOWIEC, KIEROWNIK}, {ADMINISTRATOR, HANDLOWIEC}),
     # Cennik widzą handlowcy (do kalkulacji), zmienia go administrator.
     "cennik": ({ADMINISTRATOR, HANDLOWIEC}, {ADMINISTRATOR}),
     "statystyki": ({ADMINISTRATOR, HANDLOWIEC}, set()),

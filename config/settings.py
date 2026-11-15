@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "apps.bhp",
     "apps.szablony",
     "apps.oferty",
+    "apps.umowy",
     "apps.pulpit",
 ]
 
