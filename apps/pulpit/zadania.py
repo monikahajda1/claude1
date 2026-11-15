@@ -38,3 +38,32 @@ def zadania_budow(budowy, dzis=None, z_bhp=False):
             wynik.append(ZadanieBudowy(b, "Brak przypisanych pracowników (ekipy).", "warning", 2))
     wynik.sort(key=lambda z: (z.waga, z.budowa.data_rozpoczecia or dzis))
     return wynik
+
+
+@dataclass
+class ZadanieOferty:
+    oferta: object
+    tekst: str
+    kolor: str
+    waga: int
+
+
+def zadania_ofert(oferty, dzis=None):
+    """Oferty wymagające kontaktu z klientem oraz takie, którym kończy się ważność."""
+    from apps.oferty.models import STATUSY_OTWARTE
+
+    dzis = dzis or timezone.localdate()
+    wynik = []
+    for o in oferty.filter(aktualna=True, status__in=STATUSY_OTWARTE).select_related("klient", "handlowiec"):
+        if o.nastepny_kontakt and o.nastepny_kontakt <= dzis:
+            dni = (dzis - o.nastepny_kontakt).days
+            od_wyslania = (dzis - o.data_wyslania).days if o.data_wyslania else None
+            tekst = "Czas na kontakt z klientem" + (f" (spóźnione o {dni} dni)" if dni else " – dziś")
+            if od_wyslania is not None:
+                tekst += f". Wysłana {od_wyslania} dni temu."
+            wynik.append(ZadanieOferty(o, tekst, "danger" if dni >= 3 else "warning", 0 if dni >= 3 else 1))
+        waznosc = o.wazna_do
+        if waznosc and 0 <= (waznosc - dzis).days <= 7:
+            wynik.append(ZadanieOferty(o, f"Oferta traci ważność za {(waznosc - dzis).days} dni ({waznosc:%d.%m.%Y}).", "info", 2))
+    wynik.sort(key=lambda z: (z.waga, z.oferta.nastepny_kontakt or dzis))
+    return wynik

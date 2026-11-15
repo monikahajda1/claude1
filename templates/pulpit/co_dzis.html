@@ -7,6 +7,10 @@
 </div>
 
 <div class="row g-3 mb-4">
+  {% if widzi.oferty %}
+  <div class="col-6 col-lg-3"><a class="card kafelek" href="{% url 'oferty:lista' %}"><div class="card-body">
+    <div class="liczba text-danger">{{ oferty_do_kontaktu }}</div><div class="text-muted">ofert czeka na kontakt</div></div></a></div>
+  {% endif %}
   {% if widzi.budowy %}
   <div class="col-6 col-lg-3"><a class="card kafelek" href="{% url 'budowy:lista' %}?widok=aktywne"><div class="card-body">
     <div class="liczba text-primary">{{ liczba_aktywnych }}</div><div class="text-muted">budów w toku</div></div></a></div>
@@ -20,6 +24,23 @@
     <div class="liczba text-warning">{{ alerty_wkrotce|length }}</div><div class="text-muted">dokumentów wygasa w ciągu 30 dni</div></div></a></div>
   {% endif %}
 </div>
+
+{% if widzi.oferty %}
+<h2 class="h5">Oferty – kontakt z klientem{% if not jest_adminem %} (moje){% endif %}</h2>
+{% if zadania_ofert %}
+<ul class="list-group alert-lista mb-4">
+  {% for z in zadania_ofert %}
+  <li class="list-group-item border-{{ z.kolor }} d-flex flex-wrap justify-content-between gap-2">
+    <div style="flex:1 1 18rem">
+      <a href="{{ z.oferta.get_absolute_url }}" class="fw-semibold">{{ z.oferta.pelny_numer }} {{ z.oferta.nazwa }}</a>
+      <span class="text-muted small">({{ z.oferta.klient }}{% if jest_adminem and z.oferta.handlowiec %} · {{ z.oferta.handlowiec }}{% endif %})</span><br>{{ z.tekst }}
+    </div>
+    {% if z.oferta.klient.telefon %}<a class="btn btn-sm btn-outline-primary align-self-center" href="tel:{{ z.oferta.klient.telefon }}">📞 {{ z.oferta.klient.telefon }}</a>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}<p class="text-success">✓ Brak ofert czekających na kontakt.</p>{% endif %}
+{% endif %}
 
 {% if moje_budowy %}
 <h2 class="h5">Moje budowy</h2>

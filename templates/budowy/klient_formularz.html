@@ -10,7 +10,9 @@
   <div class="mt-4 d-flex gap-2 flex-wrap">
     <button class="btn btn-firmowy" type="submit">Zapisz</button>
     <a class="btn btn-outline-secondary" href="{% url 'budowy:klienci' %}">Anuluj</a>
-    {% if object %}<a class="btn btn-outline-primary ms-auto" href="{% url 'budowy:nowa' %}?klient={{ object.pk }}">+ Nowa budowa dla tego klienta</a>{% endif %}
+    {% if object %}<span class="ms-auto d-flex gap-2 flex-wrap">
+      {% if edytuje.oferty %}<a class="btn btn-outline-primary" href="{% url 'oferty:nowa' %}?klient={{ object.pk }}">+ Nowa oferta</a>{% endif %}
+      <a class="btn btn-outline-primary" href="{% url 'budowy:nowa' %}?klient={{ object.pk }}">+ Nowa budowa</a></span>{% endif %}
   </div>
 </form>
 {% else %}
@@ -19,6 +21,10 @@
 </dl>
 {% endif %}
 </div></div>
+{% if oferty %}
+<h2 class="h5 mt-4">Oferty dla tego klienta</h2>
+<div class="list-group">{% for o in oferty %}<a class="list-group-item list-group-item-action d-flex justify-content-between" href="{{ o.get_absolute_url }}"><span>{{ o.pelny_numer }} {{ o.nazwa }} <small class="text-muted">{{ o.data_wystawienia|date:"d.m.Y" }}</small></span><span class="badge text-bg-{{ o.kolor_statusu }}">{{ o.get_status_display }}</span></a>{% endfor %}</div>
+{% endif %}
 {% if budowy %}
 <h2 class="h5 mt-4">Budowy tego klienta</h2>
 <div class="list-group">{% for b in budowy %}<a class="list-group-item list-group-item-action d-flex justify-content-between" href="{{ b.get_absolute_url }}"><span>{{ b.numer }} {{ b.nazwa }}</span><span class="badge text-bg-{{ b.kolor_etapu }}">{{ b.get_etap_display }}</span></a>{% endfor %}</div>

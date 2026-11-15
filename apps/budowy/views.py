@@ -174,4 +174,6 @@ class KlientUpdateView(ModulMixin, KomunikatZapisuMixin, UpdateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["budowy"] = u.budowy_dla(self.request.user).filter(klient=self.object)
+        if u.moze_widziec(self.request.user, "oferty"):
+            ctx["oferty"] = self.object.oferty.filter(aktualna=True).select_related("handlowiec")
         return ctx
