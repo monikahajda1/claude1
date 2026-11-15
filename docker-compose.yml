@@ -1,0 +1,36 @@
+# Dwa „pudełka” (kontenery): baza danych PostgreSQL i aplikacja.
+# Ustawienia (hasła, adresy) czytane są z pliku .env.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - baza:/var/lib/postgresql/data
+      - ./kopie:/kopie
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MEDIA_ROOT: /app/media
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      # Aplikacja dostępna na tym komputerze (http://localhost:8000),
+      # a później także przez Tailscale.
+      - "${PORT:-8000}:8000"
+    volumes:
+      - pliki:/app/media
+      - ./kopie:/kopie
+
+volumes:
+  baza:   # dane bazy
+  pliki:  # przesłane skany i zdjęcia

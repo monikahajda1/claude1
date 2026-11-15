@@ -1,0 +1,11 @@
+{% if historia %}
+<div class="card mt-3"><div class="card-body">
+  <h2 class="h6 text-muted">Ostatnie zmiany</h2>
+  <ul class="list-unstyled small mb-0">
+  {% for h in historia %}
+    <li>{{ h.history_date|date:"d.m.Y H:i" }} – {{ h.history_user|default:"system" }}:
+      {% if h.history_type == "+" %}utworzono{% elif h.history_type == "~" %}zmieniono{% else %}usunięto{% endif %}</li>
+  {% endfor %}
+  </ul>
+</div></div>
+{% endif %}

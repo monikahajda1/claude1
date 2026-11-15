@@ -1,1 +1,23 @@
-# claude1
+# Posadzki – Budowy
+
+Aplikacja do prowadzenia wielu budów posadzek żywicznych jednocześnie – od oferty do dokumentacji powykonawczej.
+
+**Instalacja na Windowsie krok po kroku:** [docs/INSTALACJA_WINDOWS.md](docs/INSTALACJA_WINDOWS.md)
+
+Skrót (gdy wszystko jest już zainstalowane):
+
+1. `start.bat` – uruchamia aplikację → http://localhost:8000
+2. `skrypty\utworz-administratora.bat` – pierwsze konto
+3. `skrypty\dane-testowe.bat` – fikcyjne dane do wypróbowania (konta demo, hasło `Demo-haslo-2026`)
+
+## Co już działa (etap 1)
+- Logowanie, role (Administrator, Handlowiec, BHP, Kierownik robót), tryb „tylko podgląd”, dziennik zmian
+- Lista budów z etapami (oferta → umowa → przygotowanie → realizacja → rozliczenie → dokumentacja → zakończona)
+- Klienci
+- BHP: pracownicy i sprzęt z dokumentami i datami ważności, skany/zdjęcia, przypisanie ekipy do budowy
+- Ekran „Co dziś?” z alertami (wygasłe, brakujące, wygasające w ciągu 7 i 30 dni; terminy budów)
+- Kopie zapasowe i przywracanie jednym kliknięciem; wygląd na telefonie; przygotowanie jako PWA
+
+Opis techniczny projektu i zasad: [CLAUDE.md](CLAUDE.md)
+
+Wszystkie dane w repozytorium są **fikcyjne**.

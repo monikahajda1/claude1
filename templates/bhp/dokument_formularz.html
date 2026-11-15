@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block tytul %}Dokument: {{ wlasciciel }}{% endblock %}
+{% block tresc %}
+<a href="{{ wlasciciel.get_absolute_url }}" class="small">‹ {{ wlasciciel }}</a>
+<h1 class="h3">{% if object %}Edycja dokumentu{% else %}Nowy dokument{% endif %}: {{ wlasciciel }}</h1>
+<div class="card"><div class="card-body">
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  {% include "_pola.html" %}
+  {% if object.plik %}<p class="mt-2 small">Obecny plik: <a href="{{ object.plik.url }}" target="_blank">otwórz</a> (wybierz nowy, aby podmienić)</p>{% endif %}
+  <p class="form-text mt-3">Wskazówka: po wybraniu rodzaju i daty wydania „ważny do” podpowie się samo (jeśli rodzaj ma typowy okres ważności).</p>
+  <div class="mt-3 d-flex gap-2 flex-wrap">
+    <button class="btn btn-firmowy" type="submit">Zapisz</button>
+    <a class="btn btn-outline-secondary" href="{{ wlasciciel.get_absolute_url }}">Anuluj</a>
+    {% if object %}<a class="btn btn-outline-danger ms-auto" href="{% url cfg.dok_usun_url wlasciciel.pk object.pk %}">Usuń dokument</a>{% endif %}
+  </div>
+</form>
+</div></div>
+{{ okresy|json_script:"okresy-dokumentow" }}
+{% endblock %}

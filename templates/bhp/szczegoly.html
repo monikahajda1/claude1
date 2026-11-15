@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block tytul %}{{ object }}{% endblock %}
+{% block tresc %}
+<a href="{% url cfg.lista_url %}" class="small">‹ {{ cfg.tytul_listy }}</a>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">{{ object }}{% if not object.aktywny %} <span class="badge text-bg-secondary fs-6">nieaktywny</span>{% endif %}</h1>
+    <span class="text-muted">{% if rodzaj == "pracownik" %}{{ object.stanowisko }}{% if object.firma %} · podwykonawca: {{ object.firma }}{% else %} · pracownik własny{% endif %}{% if object.telefon %} · <a href="tel:{{ object.telefon }}">{{ object.telefon }}</a>{% endif %}{% else %}{{ object.producent_model }}{% endif %}</span>
+  </div>
+  {% if edytuje.bhp %}<div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="{% url cfg.edytuj_url object.pk %}">Edytuj dane</a>
+    <a class="btn btn-firmowy" href="{% url cfg.dok_nowy_url object.pk %}">+ Dodaj dokument</a>
+  </div>{% endif %}
+</div>
+
+<div class="card mb-3"><div class="card-body">
+  <h2 class="h6 text-muted">Stan dokumentów (liczy się najnowszy dokument danego rodzaju)</h2>
+  {% if stan %}
+  <ul class="list-group list-group-flush">
+    {% for typ, dok, st in stan %}
+    <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 px-0">
+      <span><strong>{{ typ }}</strong>{% if dok %}<br><small class="text-muted">{% if dok.data_waznosci %}ważny do {{ dok.data_waznosci|date:"d.m.Y" }}{% else %}bezterminowy{% endif %}</small>{% endif %}</span>
+      <span><span class="badge text-bg-{{ st.kolor }}">{{ st.opis }}</span>
+        {% if edytuje.bhp and st.alert %}<a class="btn btn-sm btn-outline-primary ms-2" href="{% url cfg.dok_nowy_url object.pk %}?typ={{ typ.pk }}">+ nowy</a>{% endif %}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="text-muted mb-0">Brak dokumentów.</p>{% endif %}
+</div></div>
+
+<div class="card mb-3"><div class="card-body">
+  <h2 class="h6 text-muted">Wszystkie dokumenty (także archiwalne)</h2>
+  <table class="table table-sm responsywna mb-0">
+    <thead><tr><th>Rodzaj</th><th>Numer</th><th>Wydany</th><th>Ważny do</th><th>Plik</th><th></th></tr></thead>
+    <tbody>
+    {% for d in dokumenty %}
+    <tr class="{% if d.pk not in aktualne_id %}text-muted{% endif %}">
+      <td>{{ d.typ }}{% if d.pk not in aktualne_id %} <small>(archiwalny)</small>{% endif %}</td>
+      <td data-etykieta="Numer">{{ d.numer|default:"—" }}</td>
+      <td data-etykieta="Wydany">{{ d.data_wydania|date:"d.m.Y"|default:"—" }}</td>
+      <td data-etykieta="Ważny do">{{ d.data_waznosci|date:"d.m.Y"|default:"bezterminowo" }}</td>
+      <td data-etykieta="Plik">{% if d.plik %}<a href="{{ d.plik.url }}" target="_blank">otwórz</a>{% else %}—{% endif %}</td>
+      <td class="text-end">{% if edytuje.bhp %}<a class="btn btn-sm btn-outline-secondary" href="{% url cfg.dok_edytuj_url object.pk d.pk %}">Edytuj</a>{% endif %}</td>
+    </tr>
+    {% empty %}<tr><td colspan="6" class="text-muted">Brak dokumentów.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div></div>
+
+<div class="card"><div class="card-body">
+  <h2 class="h6 text-muted">Budowy</h2>
+  {% for b in budowy %}<a class="badge text-bg-{{ b.kolor_etapu }} text-decoration-none me-1" href="{{ b.get_absolute_url }}">{{ b.nazwa }} ({{ b.get_etap_display }})</a>{% empty %}<span class="text-muted">Nie jest przypisany do żadnej budowy.</span>{% endfor %}
+  {% if object.uwagi %}<hr><p class="mb-0" style="white-space:pre-line">{{ object.uwagi }}</p>{% endif %}
+</div></div>
+{% include "_historia.html" %}
+{% endblock %}

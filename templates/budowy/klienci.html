@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block tytul %}Klienci{% endblock %}
+{% block tresc %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 mb-0">Klienci</h1>
+  {% if edytuje.klienci %}<a class="btn btn-firmowy" href="{% url 'budowy:klient_nowy' %}">+ Nowy klient</a>{% endif %}
+</div>
+<form class="row g-2 mb-3" method="get">
+  <div class="col-8 col-md-6"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Szukaj: nazwa, NIP, osoba…"></div>
+  <div class="col-4 col-md-2"><button class="btn btn-outline-secondary w-100">Szukaj</button></div>
+</form>
+<table class="table table-hover bg-white responsywna">
+  <thead><tr><th>Nazwa</th><th>NIP</th><th>Kontakt</th><th class="text-end">Budowy</th></tr></thead>
+  <tbody>
+  {% for k in object_list %}
+  <tr>
+    <td><a class="fw-semibold" href="{% url 'budowy:klient_edytuj' k.pk %}">{{ k.nazwa }}</a></td>
+    <td data-etykieta="NIP">{{ k.nip|default:"—" }}</td>
+    <td data-etykieta="Kontakt">{{ k.osoba_kontaktowa }}{% if k.telefon %} · <a href="tel:{{ k.telefon }}">{{ k.telefon }}</a>{% endif %}</td>
+    <td data-etykieta="Budowy" class="text-end"><a href="{% url 'budowy:lista' %}?widok=wszystkie&q={{ k.nazwa|urlencode }}">{{ k.liczba_budow }}</a></td>
+  </tr>
+  {% empty %}<tr><td colspan="4" class="text-muted">Brak klientów.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% include "_paginacja.html" %}
+{% endblock %}

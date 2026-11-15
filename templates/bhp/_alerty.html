@@ -1,0 +1,18 @@
+{% if alerty %}
+<ul class="list-group alert-lista mb-3">
+  {% for a in alerty %}
+  <li class="list-group-item border-{{ a.status.kolor }} d-flex flex-wrap justify-content-between gap-2">
+    <div style="flex:1 1 18rem">
+      <a class="fw-semibold" href="{{ a.obiekt.get_absolute_url }}">{{ a.obiekt }}</a>
+      <span class="text-muted small">{% if a.rodzaj == "pracownik" %}{{ a.obiekt.stanowisko }}{% if a.obiekt.firma %} · {{ a.obiekt.firma }}{% endif %}{% else %}sprzęt{% endif %}</span><br>
+      {{ a.typ }}{% if a.dokument %} – ważny do {{ a.dokument.data_waznosci|date:"d.m.Y" }}{% endif %}
+      {% for b in a.budowy %}<a class="badge text-bg-light border text-decoration-none ms-1" href="{{ b.get_absolute_url }}">🏗 {{ b.nazwa }}</a>{% endfor %}
+    </div>
+    <div class="text-end ms-auto">
+      <span class="badge text-bg-{{ a.status.kolor }}">{{ a.status.opis }}</span>
+      {% if edytuje.bhp %}<br><a class="small" href="{% if a.rodzaj == 'pracownik' %}{% url 'bhp:pracownik_dokument_nowy' a.obiekt.pk %}{% else %}{% url 'bhp:sprzet_dokument_nowy' a.obiekt.pk %}{% endif %}?typ={{ a.typ.pk }}">+ dodaj nowy dokument</a>{% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}<p class="text-success">{{ pusto }}</p>{% endif %}

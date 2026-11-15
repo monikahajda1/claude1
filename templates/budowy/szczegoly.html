@@ -1,0 +1,65 @@
+{% extends "base.html" %}{% load pomocnicze %}
+{% block tytul %}{{ object.nazwa }}{% endblock %}
+{% block tresc %}
+{% with b=object %}
+<a href="{% url 'budowy:lista' %}" class="small no-print">‹ Wszystkie budowy</a>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">{{ b.nazwa }}</h1>
+    <span class="text-muted">{{ b.numer }}</span> <span class="badge text-bg-{{ b.kolor_etapu }}">{{ b.get_etap_display }}</span>
+  </div>
+  {% if moze_edytowac %}<a class="btn btn-firmowy" href="{% url 'budowy:edytuj' b.pk %}">Edytuj</a>{% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 text-muted">Dane budowy</h2>
+      <dl class="row mb-0">
+        <dt class="col-sm-5">Klient</dt><dd class="col-sm-7">{% if widzi_klienta %}<a href="{% url 'budowy:klient_edytuj' b.klient.pk %}">{{ b.klient }}</a>{% else %}{{ b.klient }}{% endif %}
+          {% if b.klient.osoba_kontaktowa %}<br><small>{{ b.klient.osoba_kontaktowa }}{% if b.klient.telefon %}, <a href="tel:{{ b.klient.telefon }}">{{ b.klient.telefon }}</a>{% endif %}</small>{% endif %}</dd>
+        <dt class="col-sm-5">Adres</dt><dd class="col-sm-7">{{ b.adres }}{% if b.miasto %}, {{ b.miasto }}{% endif %}
+          <br><a class="small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query={{ b.adres|urlencode }}%20{{ b.miasto|urlencode }}">Pokaż na mapie</a></dd>
+        <dt class="col-sm-5">Kierownik robót</dt><dd class="col-sm-7">{{ b.kierownik|default:"— brak —" }}</dd>
+        <dt class="col-sm-5">System posadzki</dt><dd class="col-sm-7">{{ b.system_posadzki|default:"—" }}</dd>
+        <dt class="col-sm-5">Powierzchnia</dt><dd class="col-sm-7">{% if b.powierzchnia_m2 %}{{ b.powierzchnia_m2|floatformat:"-2" }} m²{% else %}—{% endif %}</dd>
+        <dt class="col-sm-5">Wartość netto</dt><dd class="col-sm-7">{{ b.wartosc_netto|zl }}</dd>
+        <dt class="col-sm-5">Termin</dt><dd class="col-sm-7">{{ b.data_rozpoczecia|date:"d.m.Y"|default:"?" }} – {{ b.data_zakonczenia|date:"d.m.Y"|default:"?" }}</dd>
+      </dl>
+      {% if b.uwagi %}<hr><p class="mb-0" style="white-space:pre-line">{{ b.uwagi }}</p>{% endif %}
+    </div></div>
+  </div>
+
+  {% if widzi_bhp %}
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center">
+        <h2 class="h6 text-muted mb-0">Ekipa i sprzęt (BHP)</h2>
+        {% if edytuje_bhp %}<a class="btn btn-sm btn-outline-primary" href="{% url 'budowy:ekipa' b.pk %}">Zmień skład</a>{% endif %}
+      </div>
+      {% if alerty_bhp %}<div class="alert alert-danger py-2 mt-2 mb-2">Problemy z dokumentami: {{ alerty_bhp|length }}</div>{% else %}{% if pracownicy or sprzet %}<div class="alert alert-success py-2 mt-2 mb-2">Dokumenty ekipy i sprzętu w porządku.</div>{% endif %}{% endif %}
+      <h3 class="h6 mt-3">Pracownicy ({{ pracownicy|length }})</h3>
+      <ul class="list-unstyled mb-2">
+      {% for p, problemy in pracownicy %}
+        <li class="py-1 border-bottom"><a href="{{ p.get_absolute_url }}">{{ p }}</a> <small class="text-muted">{{ p.stanowisko }}</small>
+          {% for a in problemy %}<br><span class="badge text-bg-{{ a.status.kolor }}">{{ a.typ }}: {{ a.status.opis }}</span>{% empty %} <span class="text-success">✓</span>{% endfor %}</li>
+      {% empty %}<li class="text-muted">Nikt nie jest przypisany.</li>{% endfor %}
+      </ul>
+      <h3 class="h6 mt-3">Sprzęt ({{ sprzet|length }})</h3>
+      <ul class="list-unstyled mb-0">
+      {% for s, problemy in sprzet %}
+        <li class="py-1 border-bottom"><a href="{{ s.get_absolute_url }}">{{ s }}</a>
+          {% for a in problemy %}<br><span class="badge text-bg-{{ a.status.kolor }}">{{ a.typ }}: {{ a.status.opis }}</span>{% empty %} <span class="text-success">✓</span>{% endfor %}</li>
+      {% empty %}<li class="text-muted">Brak przypisanego sprzętu.</li>{% endfor %}
+      </ul>
+    </div></div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card mt-3"><div class="card-body text-muted small">
+  W kolejnych etapach pojawią się tu: oferta i kalkulacja, dokumenty wejścia na budowę (IBWR, KZM, checklista), rozliczenia miesięczne i dokumentacja powykonawcza.
+</div></div>
+{% include "_historia.html" %}
+{% endwith %}
+{% endblock %}

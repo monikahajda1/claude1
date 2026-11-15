@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block tytul %}Logowanie{% endblock %}
+{% block tresc %}
+<div class="row justify-content-center mt-4">
+  <div class="col-sm-9 col-md-6 col-lg-4">
+    <div class="card"><div class="card-body p-4">
+      <h1 class="h4 mb-1">{{ NAZWA_APLIKACJI }}</h1>
+      <p class="text-muted mb-4">Zaloguj się, aby kontynuować.</p>
+      {% if form.errors %}<div class="alert alert-danger">Nieprawidłowy login lub hasło. Uwaga: wielkość liter ma znaczenie.</div>{% endif %}
+      <form method="post">{% csrf_token %}
+        <div class="mb-3"><label class="form-label" for="id_username">Login</label>
+          <input class="form-control form-control-lg" type="text" name="username" id="id_username" autocomplete="username" autocapitalize="none" required autofocus value="{{ form.username.value|default:'' }}"></div>
+        <div class="mb-3"><label class="form-label" for="id_password">Hasło</label>
+          <input class="form-control form-control-lg" type="password" name="password" id="id_password" autocomplete="current-password" required></div>
+        <input type="hidden" name="next" value="{{ next }}">
+        <button class="btn btn-firmowy btn-lg w-100" type="submit">Zaloguj</button>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

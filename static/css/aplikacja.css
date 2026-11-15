@@ -1,0 +1,28 @@
+:root { --firmowy: #1f4e79; }
+.bg-firmowy { background-color: var(--firmowy) !important; }
+.btn-firmowy { background-color: var(--firmowy); color: #fff; }
+.btn-firmowy:hover { background-color: #163a5b; color: #fff; }
+body { background: #f4f6f9; }
+.card { border: 0; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.kafelek .liczba { font-size: 2rem; font-weight: 700; line-height: 1; }
+.kafelek { text-decoration: none; color: inherit; display: block; }
+.kafelek:hover { box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.tabela-karty td, .tabela-karty th { vertical-align: middle; }
+.asteriskField, .wymagane::after { content: " *"; color: #dc3545; }
+.alert-lista .list-group-item { border-left-width: 4px; }
+.alert-lista .border-danger { border-left-color: #dc3545 !important; }
+.alert-lista .border-warning { border-left-color: #ffc107 !important; }
+.alert-lista .border-info { border-left-color: #0dcaf0 !important; }
+.checkbox-lista { max-height: 50vh; overflow-y: auto; }
+.checkbox-lista ul, .checkbox-lista div > div { list-style: none; padding-left: 0; }
+.checkbox-lista label { display: block; padding: .35rem .25rem; border-bottom: 1px solid #eee; cursor: pointer; }
+.checkbox-lista input { margin-right: .5rem; transform: scale(1.2); }
+/* Na telefonie: większe przyciski i tabele zamieniane w „karty” */
+@media (max-width: 767.98px) {
+  .btn { padding: .5rem .9rem; }
+  table.responsywna thead { display: none; }
+  table.responsywna tr { display: block; background: #fff; margin-bottom: .6rem; border-radius: .4rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: .4rem .6rem; }
+  table.responsywna td { display: block; border: 0; padding: .15rem 0; }
+  table.responsywna td[data-etykieta]::before { content: attr(data-etykieta) ": "; font-weight: 600; color: #6c757d; }
+}
+@media print { nav, .no-print, .btn { display: none !important; } body { background: #fff; } }

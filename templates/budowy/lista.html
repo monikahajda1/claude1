@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% load pomocnicze %}
+{% block tytul %}Budowy{% endblock %}
+{% block tresc %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 mb-0">Budowy</h1>
+  {% if moze_dodac %}<a class="btn btn-firmowy" href="{% url 'budowy:nowa' %}">+ Nowa budowa</a>{% endif %}
+</div>
+<ul class="nav nav-pills mb-3 flex-nowrap overflow-auto">
+  {% for kod, nazwa, ile in widoki %}
+  <li class="nav-item"><a class="nav-link text-nowrap {% if widok == kod %}active{% endif %}" href="?widok={{ kod }}">{{ nazwa }} <span class="badge text-bg-light">{{ ile }}</span></a></li>
+  {% endfor %}
+</ul>
+<form class="row g-2 mb-3" method="get">
+  <input type="hidden" name="widok" value="{{ widok }}">
+  <div class="col-md-6"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Szukaj: nazwa, numer, adres, klient…"></div>
+  <div class="col-8 col-md-4"><select class="form-select" name="etap"><option value="">— każdy etap —</option>
+    {% for k, n in etapy %}<option value="{{ k }}" {% if etap == k %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
+  <div class="col-4 col-md-2"><button class="btn btn-outline-secondary w-100">Filtruj</button></div>
+</form>
+{% if object_list %}
+<div class="table-responsive-md">
+<table class="table table-hover bg-white responsywna tabela-karty">
+  <thead><tr><th>Numer</th><th>Budowa</th><th>Klient</th><th>Etap</th><th>Kierownik</th><th>Termin</th><th class="text-end">m²</th></tr></thead>
+  <tbody>
+  {% for b in object_list %}
+  <tr>
+    <td data-etykieta="Numer" class="text-nowrap">{{ b.numer }}</td>
+    <td><a class="fw-semibold" href="{{ b.get_absolute_url }}">{{ b.nazwa }}</a><br><small class="text-muted">{{ b.adres }}{% if b.miasto %}, {{ b.miasto }}{% endif %}</small></td>
+    <td data-etykieta="Klient">{{ b.klient }}</td>
+    <td><span class="badge text-bg-{{ b.kolor_etapu }}">{{ b.get_etap_display }}</span></td>
+    <td data-etykieta="Kierownik">{{ b.kierownik|default:"—" }}</td>
+    <td data-etykieta="Termin" class="text-nowrap">{{ b.data_rozpoczecia|date:"d.m.Y"|default:"?" }} – {{ b.data_zakonczenia|date:"d.m.Y"|default:"?" }}</td>
+    <td data-etykieta="Powierzchnia" class="text-end">{{ b.powierzchnia_m2|floatformat:"0"|default:"—" }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "_paginacja.html" %}
+{% else %}<p class="text-muted">Brak budów spełniających kryteria.</p>{% endif %}
+{% endblock %}

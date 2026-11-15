@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block tytul %}{% if object %}{{ object.nazwa }}{% else %}Nowy klient{% endif %}{% endblock %}
+{% block tresc %}
+<a href="{% url 'budowy:klienci' %}" class="small">‹ Wszyscy klienci</a>
+<h1 class="h3">{% if object %}{{ object.nazwa }}{% else %}Nowy klient{% endif %}</h1>
+<div class="card"><div class="card-body">
+{% if edytuje.klienci %}
+<form method="post">{% csrf_token %}
+  {% include "_pola.html" %}
+  <div class="mt-4 d-flex gap-2 flex-wrap">
+    <button class="btn btn-firmowy" type="submit">Zapisz</button>
+    <a class="btn btn-outline-secondary" href="{% url 'budowy:klienci' %}">Anuluj</a>
+    {% if object %}<a class="btn btn-outline-primary ms-auto" href="{% url 'budowy:nowa' %}?klient={{ object.pk }}">+ Nowa budowa dla tego klienta</a>{% endif %}
+  </div>
+</form>
+{% else %}
+<dl class="row mb-0">
+  {% for pole in form %}<dt class="col-sm-4">{{ pole.label|capfirst }}</dt><dd class="col-sm-8">{{ pole.value|default:"—" }}</dd>{% endfor %}
+</dl>
+{% endif %}
+</div></div>
+{% if budowy %}
+<h2 class="h5 mt-4">Budowy tego klienta</h2>
+<div class="list-group">{% for b in budowy %}<a class="list-group-item list-group-item-action d-flex justify-content-between" href="{{ b.get_absolute_url }}"><span>{{ b.numer }} {{ b.nazwa }}</span><span class="badge text-bg-{{ b.kolor_etapu }}">{{ b.get_etap_display }}</span></a>{% endfor %}</div>
+{% endif %}
+{% endblock %}

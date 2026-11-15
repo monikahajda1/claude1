@@ -1,0 +1,19 @@
+{% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+{% for pole in form.hidden_fields %}{{ pole }}{% endfor %}
+<div class="row g-3">
+{% for pole in form.visible_fields %}
+  <div class="{% if pole.field.widget.input_type == 'checkbox' %}col-12{% elif pole.field.widget.attrs.rows %}col-12{% else %}col-md-6{% endif %}">
+    {% if pole.field.widget.input_type == 'checkbox' %}
+      <div class="form-check form-switch">
+        {{ pole }}
+        <label class="form-check-label" for="{{ pole.id_for_label }}">{{ pole.label|capfirst }}</label>
+      </div>
+    {% else %}
+      <label class="form-label {% if pole.field.required %}wymagane{% endif %}" for="{{ pole.id_for_label }}">{{ pole.label|capfirst }}</label>
+      {{ pole }}
+    {% endif %}
+    {% if pole.help_text %}<div class="form-text">{{ pole.help_text }}</div>{% endif %}
+    {% for e in pole.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+  </div>
+{% endfor %}
+</div>

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block tytul %}Zmiana hasła{% endblock %}
+{% block tresc %}
+<h1 class="h4">Zmiana hasła</h1>
+<div class="card"><div class="card-body">
+<form method="post">{% csrf_token %}
+  {% for pole in form %}
+  <div class="mb-3"><label class="form-label" for="{{ pole.id_for_label }}">{{ pole.label }}</label>
+    <input class="form-control" type="password" name="{{ pole.html_name }}" id="{{ pole.id_for_label }}" required>
+    {% for e in pole.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+  </div>
+  {% endfor %}
+  <p class="form-text">Hasło: co najmniej 10 znaków, nie same cyfry, niepodobne do loginu.</p>
+  <button class="btn btn-firmowy">Zmień hasło</button>
+</form>
+</div></div>
+{% endblock %}

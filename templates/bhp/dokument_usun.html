@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block tresc %}
+<div class="card"><div class="card-body">
+<h1 class="h4">Usunąć dokument?</h1>
+<p><strong>{{ object.typ }}</strong> ({{ wlasciciel }}), ważny do {{ object.data_waznosci|date:"d.m.Y"|default:"bezterminowo" }}.</p>
+<p class="text-muted">Jeśli dokument po prostu wygasł – nie usuwaj go, tylko dodaj nowy. Stary zostanie jako archiwalny.</p>
+<form method="post">{% csrf_token %}
+  <button class="btn btn-danger">Tak, usuń</button>
+  <a class="btn btn-outline-secondary" href="{{ wlasciciel.get_absolute_url }}">Anuluj</a>
+</form>
+</div></div>
+{% endblock %}

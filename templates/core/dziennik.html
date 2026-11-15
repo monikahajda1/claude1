@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block tytul %}Dziennik zmian{% endblock %}
+{% block tresc %}
+<h1 class="h3">Dziennik zmian</h1>
+<p class="text-muted">Kto, co i kiedy zmienił. Pokazujemy ostatnie {{ limit }} wpisów.</p>
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-4"><select class="form-select" name="model"><option value="">— wszystko —</option>{% for k, n in modele %}<option value="{{ k }}" {% if k == wybrany_model %}selected{% endif %}>{{ n|capfirst }}</option>{% endfor %}</select></div>
+  <div class="col-md-4"><select class="form-select" name="kto"><option value="">— każdy użytkownik —</option>{% for u in uzytkownicy %}<option value="{{ u.username }}" {% if u.username == wybrany_user %}selected{% endif %}>{{ u }}</option>{% endfor %}</select></div>
+  <div class="col-md-2"><button class="btn btn-outline-secondary w-100">Filtruj</button></div>
+</form>
+<table class="table table-sm bg-white responsywna">
+  <thead><tr><th>Kiedy</th><th>Kto</th><th>Co</th><th>Zmiany</th></tr></thead>
+  <tbody>
+  {% for w in wiersze %}
+  <tr>
+    <td class="text-nowrap">{{ w.kiedy|date:"d.m.Y H:i" }}</td>
+    <td data-etykieta="Kto">{{ w.kto|default:"system" }}</td>
+    <td><span class="badge text-bg-{{ w.kolor }}">{{ w.opis }}</span> {{ w.co }}: <strong>{{ w.obiekt }}</strong></td>
+    <td class="small">{% for pole, stara, nowa in w.zmiany %}<div><em>{{ pole }}</em>: {{ stara|default:"—"|truncatechars:60 }} → {{ nowa|default:"—"|truncatechars:60 }}</div>{% endfor %}</td>
+  </tr>
+  {% empty %}<tr><td colspan="4" class="text-muted">Brak wpisów.</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endblock %}

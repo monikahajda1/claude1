@@ -1,0 +1,19 @@
+# Hasła i ustawienia lokalne – NIGDY do gita
+.env
+# Dane: przesłane pliki, kopie zapasowe
+media/
+kopie/*
+!kopie/.gitkeep
+*.dump
+*.sqlite3
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+staticfiles/
+# Edytory / system
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

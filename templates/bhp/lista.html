@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% load pomocnicze %}
+{% block tytul %}{{ cfg.tytul_listy }}{% endblock %}
+{% block tresc %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 mb-0">{{ cfg.tytul_listy }}</h1>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-danger" href="{% url 'bhp:alerty' %}">Wszystkie alerty</a>
+    {% if edytuje.bhp %}<a class="btn btn-firmowy" href="{% url cfg.nowy_url %}">+ {{ cfg.nowy }}</a>{% endif %}
+  </div>
+</div>
+<form class="row g-2 mb-3 align-items-center" method="get">
+  <div class="col-md-5"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Szukaj…"></div>
+  <div class="col-6 col-md-3"><select class="form-select" name="pokaz">
+    <option value="aktywni" {% if pokaz == "aktywni" %}selected{% endif %}>Tylko aktywne</option>
+    <option value="nieaktywni" {% if pokaz == "nieaktywni" %}selected{% endif %}>Tylko nieaktywne</option>
+    <option value="wszyscy" {% if pokaz == "wszyscy" %}selected{% endif %}>Wszystkie</option></select></div>
+  <div class="col-6 col-md-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="problemy" value="1" id="problemy" {% if tylko_problemy %}checked{% endif %}><label class="form-check-label" for="problemy">Tylko z problemami</label></div></div>
+  <div class="col-md-2"><button class="btn btn-outline-secondary w-100">Filtruj</button></div>
+</form>
+{% if wiersze %}
+<table class="table table-hover bg-white responsywna tabela-karty">
+  <thead><tr><th>{% if rodzaj == "pracownik" %}Nazwisko i imię{% else %}Sprzęt{% endif %}</th><th>{% if rodzaj == "pracownik" %}Stanowisko / firma{% else %}Producent / model{% endif %}</th><th>Stan dokumentów</th><th>Aktywne budowy</th></tr></thead>
+  <tbody>
+  {% for w in wiersze %}{% with o=w.obiekt %}
+  <tr>
+    <td><a class="fw-semibold" href="{{ o.get_absolute_url }}">{{ o }}</a>{% if not o.aktywny %} <span class="badge text-bg-secondary">nieaktywny</span>{% endif %}</td>
+    <td data-etykieta="{% if rodzaj == 'pracownik' %}Stanowisko{% else %}Model{% endif %}">{% if rodzaj == "pracownik" %}{{ o.stanowisko|default:"—" }}{% if o.firma %}<br><small class="text-muted">podwykonawca: {{ o.firma }}</small>{% endif %}{% else %}{{ o.producent_model|default:"—" }}{% endif %}</td>
+    <td>{% if w.problemy %}{% for typ, dok, st in w.problemy %}<span class="badge text-bg-{{ st.kolor }} me-1 mb-1">{{ typ }}: {{ st.opis }}</span>{% endfor %}{% else %}<span class="badge text-bg-success">✓ wszystko ważne</span>{% endif %}</td>
+    <td data-etykieta="Budowy">{% for b in o.budowy.all %}{% if b.aktywna %}<a class="badge text-bg-light border text-decoration-none" href="{{ b.get_absolute_url }}">{{ b.nazwa }}</a> {% endif %}{% endfor %}</td>
+  </tr>
+  {% endwith %}{% endfor %}
+  </tbody>
+</table>
+{% include "_paginacja.html" %}
+{% else %}<p class="text-muted">Brak pozycji spełniających kryteria.</p>{% endif %}
+{% endblock %}

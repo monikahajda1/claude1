@@ -1,0 +1,9 @@
+.git
+.env
+media
+kopie
+staticfiles
+__pycache__
+*.pyc
+.venv
+venv

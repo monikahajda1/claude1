@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block tytul %}{% if object %}Edycja: {{ object }}{% else %}{{ cfg.nowy }}{% endif %}{% endblock %}
+{% block tresc %}
+<h1 class="h3">{% if object %}Edycja: {{ object }}{% else %}{{ cfg.nowy }}{% endif %}</h1>
+<div class="card"><div class="card-body">
+<form method="post">{% csrf_token %}
+  {% include "_pola.html" %}
+  <div class="mt-4 d-flex gap-2">
+    <button class="btn btn-firmowy" type="submit">Zapisz</button>
+    <a class="btn btn-outline-secondary" href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url cfg.lista_url %}{% endif %}">Anuluj</a>
+  </div>
+</form>
+</div></div>
+{% endblock %}
