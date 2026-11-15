@@ -67,3 +67,47 @@ def zadania_ofert(oferty, dzis=None):
             wynik.append(ZadanieOferty(o, f"Oferta traci ważność za {(waznosc - dzis).days} dni ({waznosc:%d.%m.%Y}).", "info", 2))
     wynik.sort(key=lambda z: (z.waga, z.oferta.nastepny_kontakt or dzis))
     return wynik
+
+
+DNI_PRZED_KAUCJA_GWARANCJA = 30
+
+
+def _termin(tekst, data, dzis):
+    dni = (data - dzis).days
+    if dni < 0:
+        return f"{tekst} – termin minął {-dni} dni temu ({data:%d.%m.%Y})", "danger", 0
+    if dni == 0:
+        return f"{tekst} – termin dziś", "danger", 0
+    return f"{tekst} – za {dni} dni ({data:%d.%m.%Y})", "info" if dni > 7 else "warning", 3 if dni > 7 else 1
+
+
+def zadania_umow(budowy, dzis=None):
+    """Umowy: brak danych/skanu, zwrot kaucji, koniec gwarancji (dla osób z dostępem do umów)."""
+    from apps.core.templatetags.pomocnicze import zl
+    from apps.umowy.models import FormaZabezpieczenia, Umowa
+
+    dzis = dzis or timezone.localdate()
+    wynik = []
+    umowy = {u.budowa_id: u for u in Umowa.objects.filter(budowa__in=budowy).prefetch_related("aneksy")}
+    for b in budowy.select_related("klient"):
+        umowa = umowy.get(b.pk)
+        if umowa is None:
+            if b.etap in ETAPY_AKTYWNE:
+                wynik.append(ZadanieBudowy(b, "Brak danych umowy – uzupełnij (terminy, gwarancja, kaucja).", "warning", 2))
+            continue
+        if not umowa.skan and b.etap != Etap.ZAKONCZONA:
+            wynik.append(ZadanieBudowy(b, "Brak skanu podpisanej umowy.", "warning", 2))
+        if umowa.zabezpieczenie_forma != FormaZabezpieczenia.BRAK and umowa.zabezpieczenie_procent:
+            for nr, data, zwrocono, kwota in (
+                (1, umowa.zwrot1_data, umowa.zwrot1_zwrocono, umowa.zwrot1_kwota),
+                (2, umowa.zwrot2_data, umowa.zwrot2_zwrocono, umowa.zwrot2_kwota),
+            ):
+                if data and not zwrocono and (data - dzis).days <= DNI_PRZED_KAUCJA_GWARANCJA:
+                    tekst, kolor, waga = _termin(f"Zwrot zabezpieczenia cz. {nr} ({zl(kwota)})", data, dzis)
+                    wynik.append(ZadanieBudowy(b, tekst + " – upomnij się u klienta.", kolor, waga))
+        koniec = umowa.koniec_gwarancji
+        if koniec and 0 <= (koniec - dzis).days <= DNI_PRZED_KAUCJA_GWARANCJA:
+            tekst, kolor, waga = _termin("Koniec gwarancji", koniec, dzis)
+            wynik.append(ZadanieBudowy(b, tekst + " – zaplanuj przegląd gwarancyjny.", kolor, waga))
+    wynik.sort(key=lambda z: z.waga)
+    return wynik
