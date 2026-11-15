@@ -25,6 +25,12 @@ MACIERZ = {
     "budowy": ({ADMINISTRATOR, HANDLOWIEC, BHP, KIEROWNIK}, {ADMINISTRATOR, HANDLOWIEC, KIEROWNIK}),
     "klienci": ({ADMINISTRATOR, HANDLOWIEC}, {ADMINISTRATOR, HANDLOWIEC}),
     "bhp": ({ADMINISTRATOR, BHP}, {ADMINISTRATOR, BHP}),
+    "oferty": ({ADMINISTRATOR, HANDLOWIEC}, {ADMINISTRATOR, HANDLOWIEC}),
+    # Cennik widzą handlowcy (do kalkulacji), zmienia go administrator.
+    "cennik": ({ADMINISTRATOR, HANDLOWIEC}, {ADMINISTRATOR}),
+    "statystyki": ({ADMINISTRATOR, HANDLOWIEC}, set()),
+    # Szablony dokumentów Word, ustawienia systemowe.
+    "ustawienia": ({ADMINISTRATOR}, {ADMINISTRATOR}),
     "dziennik": ({ADMINISTRATOR}, set()),
 }
 

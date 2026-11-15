@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     "apps.konta",
     "apps.budowy",
     "apps.bhp",
+    "apps.szablony",
+    "apps.oferty",
     "apps.pulpit",
 ]
 
