@@ -39,8 +39,6 @@ BUDOWY = [
     ("Biurowiec Kwadrat – garaż podziemny", 1, "Wrocław", Etap.UMOWA, "Poliuretanowa OS 8, system parkingowy", 2600, 12, 30),
     ("Mleczarnia – hala produkcyjna", 2, "Kalisz", Etap.REALIZACJA, "Poliuretanowo-cementowa 9 mm", 1500, -35, 30),
     ("Szpital – blok operacyjny", 3, "Testowo", Etap.ROZLICZENIE, "Epoksydowa antyelektrostatyczna", 640, -60, 45),
-    ("Galeria Słoneczna – korytarze techniczne", 4, "Łódź", Etap.OFERTA, "Epoksydowa z posypką antypoślizgową", 900, 40, 20),
-    ("Warsztat samochodowy – stanowiska", 5, "Leszno", Etap.OFERTA, "Epoksydowa chemoodporna", 320, 30, 7),
     ("Magazyn chłodniczy – rampa", 0, "Poznań", Etap.DOKUMENTACJA, "Metakrylanowa (MMA)", 450, -90, 14),
     ("Archiwum miejskie – piwnice", 1, "Wrocław", Etap.ZAKONCZONA, "Epoksydowa cienkowarstwowa", 780, -200, 20),
     ("Pralnia przemysłowa", 2, "Kalisz", Etap.WSTRZYMANA, "Poliuretanowo-cementowa 6 mm", 520, -10, 20),
@@ -110,7 +108,7 @@ class Command(BaseCommand):
                 nazwa=nazwa, klient=klienci[ki], adres=f"ul. Testowa {10 + k}", miasto=miasto, etap=etap,
                 system_posadzki=system, powierzchnia_m2=Decimal(m2), wartosc_netto=Decimal(m2) * Decimal(random.choice([95, 120, 145, 180])),
                 data_rozpoczecia=dzis + timedelta(days=start), data_zakonczenia=dzis + timedelta(days=start + czas),
-                kierownik=kierownicy[k % len(kierownicy)] if kierownicy and etap not in (Etap.OFERTA,) and k != 2 else None,
+                kierownik=kierownicy[k % len(kierownicy)] if kierownicy and k != 2 else None,
             )
             if etap in (Etap.REALIZACJA, Etap.PRZYGOTOWANIE, Etap.ROZLICZENIE):
                 b.pracownicy.set(random.sample(pracownicy[:10], 4))
@@ -120,8 +118,14 @@ class Command(BaseCommand):
         handlowcy = list(Uzytkownik.objects.filter(username__in=["handlowiec_demo", "admin_demo"])) if opts["konta"] else []
         oferty = wczytaj_oferty(klienci, handlowcy, dzis)
         self.stdout.write(self.style.SUCCESS(f"Oferty: {len(oferty)} (+ cennik)."))
+
+        from apps.umowy.dane_testowe import budowy_z_ofert, umowy_dla_budow
+
+        umowy_dla_budow(dzis)
+        budowy_z_ofert(kierownicy, dzis)
+        self.stdout.write(self.style.SUCCESS("Umowy: dodane do budów; 3 wygrane oferty zamienione w budowy."))
         self.stdout.write(self.style.SUCCESS(
-            f"Gotowe: {len(klienci)} klientów, {len(BUDOWY)} budów, {len(pracownicy)} pracowników, {len(sprzet)} sztuk sprzętu."
+            f"Gotowe: {len(klienci)} klientów, {Budowa.objects.count()} budów, {len(pracownicy)} pracowników, {len(sprzet)} sztuk sprzętu."
         ))
         if opts["konta"]:
             self.stdout.write(self.style.WARNING(

@@ -5,7 +5,7 @@ from django.views.generic import TemplateView
 from apps.budowy.models import ETAPY_AKTYWNE, Etap
 from apps.konta import uprawnienia as u
 
-from .zadania import zadania_budow, zadania_ofert
+from .zadania import zadania_budow, zadania_ofert, zadania_umow
 
 
 class CoDzisView(LoginRequiredMixin, TemplateView):
@@ -20,9 +20,11 @@ class CoDzisView(LoginRequiredMixin, TemplateView):
 
         if u.moze_widziec(user, "budowy"):
             budowy = u.budowy_dla(user)
-            ctx["zadania_budow"] = zadania_budow(budowy, dzis, z_bhp=widzi_bhp)
+            zadania = zadania_budow(budowy, dzis, z_bhp=widzi_bhp)
+            if u.moze_widziec(user, "umowy"):
+                zadania += zadania_umow(budowy, dzis)
+            ctx["zadania_budow"] = sorted(zadania, key=lambda z: z.waga)
             ctx["liczba_aktywnych"] = budowy.filter(etap__in=ETAPY_AKTYWNE).count()
-            ctx["liczba_ofert"] = budowy.filter(etap=Etap.OFERTA).count()
             if u.KIEROWNIK in u.role(user):
                 ctx["moje_budowy"] = budowy.filter(kierownik=user).exclude(etap=Etap.ZAKONCZONA).select_related("klient")
 

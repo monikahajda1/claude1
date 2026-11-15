@@ -14,8 +14,6 @@
   {% if widzi.budowy %}
   <div class="col-6 col-lg-3"><a class="card kafelek" href="{% url 'budowy:lista' %}?widok=aktywne"><div class="card-body">
     <div class="liczba text-primary">{{ liczba_aktywnych }}</div><div class="text-muted">budów w toku</div></div></a></div>
-  <div class="col-6 col-lg-3"><a class="card kafelek" href="{% url 'budowy:lista' %}?widok=oferty"><div class="card-body">
-    <div class="liczba text-secondary">{{ liczba_ofert }}</div><div class="text-muted">ofert / potencjalnych budów</div></div></a></div>
   {% endif %}
   {% if widzi.bhp %}
   <div class="col-6 col-lg-3"><a class="card kafelek" href="#pilne"><div class="card-body">

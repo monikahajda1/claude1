@@ -12,7 +12,7 @@ class BudowaForm(BootstrapMixin, forms.ModelForm):
         model = Budowa
         fields = [
             "nazwa", "klient", "adres", "miasto", "etap", "kierownik", "system_posadzki",
-            "powierzchnia_m2", "wartosc_netto", "data_rozpoczecia", "data_zakonczenia", "uwagi",
+            "powierzchnia_m2", "data_rozpoczecia", "data_zakonczenia", "uwagi",
         ]
         widgets = {
             "data_rozpoczecia": PoleDaty(),

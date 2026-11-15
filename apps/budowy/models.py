@@ -28,9 +28,8 @@ class Klient(models.Model):
 
 
 class Etap(models.TextChoices):
-    """Etapy budowy – kolejność ma znaczenie (od oferty do zakończenia)."""
+    """Etapy budowy – kolejność ma znaczenie. Oferty są osobną kartoteką (moduł Oferty)."""
 
-    OFERTA = "oferta", "Oferta"
     UMOWA = "umowa", "Umowa podpisana"
     PRZYGOTOWANIE = "przygotowanie", "Przygotowanie (BHP, wejście na budowę)"
     REALIZACJA = "realizacja", "W realizacji"
@@ -44,7 +43,6 @@ class Etap(models.TextChoices):
 ETAPY_AKTYWNE = [Etap.UMOWA, Etap.PRZYGOTOWANIE, Etap.REALIZACJA, Etap.ROZLICZENIE]
 
 KOLOR_ETAPU = {
-    Etap.OFERTA: "secondary",
     Etap.UMOWA: "info",
     Etap.PRZYGOTOWANIE: "warning",
     Etap.REALIZACJA: "primary",
@@ -61,7 +59,7 @@ class Budowa(models.Model):
     klient = models.ForeignKey(Klient, verbose_name="klient (inwestor / generalny wykonawca)", on_delete=models.PROTECT, related_name="budowy")
     adres = models.CharField("adres budowy", max_length=300)
     miasto = models.CharField("miasto", max_length=100, blank=True)
-    etap = models.CharField("etap", max_length=20, choices=Etap.choices, default=Etap.OFERTA)
+    etap = models.CharField("etap", max_length=20, choices=Etap.choices, default=Etap.UMOWA)
     kierownik = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name="kierownik robót",

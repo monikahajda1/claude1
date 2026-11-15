@@ -12,7 +12,6 @@ from .models import ETAPY_AKTYWNE, Budowa, Etap, Klient
 WIDOKI_LISTY = {
     "w-toku": ("W toku", ~Q(etap__in=[Etap.ZAKONCZONA])),
     "aktywne": ("Na budowie", Q(etap__in=ETAPY_AKTYWNE)),
-    "oferty": ("Oferty", Q(etap=Etap.OFERTA)),
     "zakonczone": ("Zakończone", Q(etap=Etap.ZAKONCZONA)),
     "wszystkie": ("Wszystkie", Q()),
 }
@@ -80,6 +79,19 @@ class BudowaDetailView(ModulMixin, DetailView):
                 problemy.setdefault((a.rodzaj, a.obiekt.pk), []).append(a)
             ctx["pracownicy"] = [(p, problemy.get(("pracownik", p.pk), [])) for p in b.pracownicy.all()]
             ctx["sprzet"] = [(s, problemy.get(("sprzet", s.pk), [])) for s in b.sprzet.all()]
+        if u.moze_widziec(user, "umowy"):
+            from apps.umowy.models import Umowa
+            from apps.umowy.operacje import suma_zakresu
+
+            ctx["widzi_umowe"] = True
+            ctx["edytuje_umowe"] = u.moze_edytowac(user, "umowy")
+            ctx["umowa"] = Umowa.objects.filter(budowa=b).prefetch_related("aneksy").first()
+            ctx["zakres"] = list(b.zakres.all())
+            ctx["suma_zakresu"] = suma_zakresu(b)
+            if ctx["umowa"]:
+                ctx["roznica_zakresu"] = ctx["umowa"].wartosc_aktualna - ctx["suma_zakresu"]
+            if u.moze_widziec(user, "oferty"):
+                ctx["oferty"] = b.oferty.all()
         ctx["historia"] = b.history.select_related("history_user")[:10]
         return ctx
 
