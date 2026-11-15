@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block tytul %}Szablon: {{ nazwa_rodzaju }}{% endblock %}
+{% block tresc %}
+<h1 class="h3">Szablon Word – {{ nazwa_rodzaju|lower }}</h1>
+<div class="card mb-3"><div class="card-body">
+  <h2 class="h6">Jak użyć własnego wzoru – krok po kroku</h2>
+  <ol class="mb-3">
+    <li>Pobierz <a href="{% url 'szablony:wzor' rodzaj %}">wzór szablonu (.docx)</a> i otwórz go w Wordzie.</li>
+    <li>Wklej swoje logo, dane firmy, stopkę, zmień czcionki i teksty. <strong>Pola w podwójnych nawiasach</strong>, np. <code>{% templatetag openvariable %} klient {% templatetag closevariable %}</code>, zostaw – program wstawi w nie dane. Możesz je przenosić i usuwać.</li>
+    <li>Jeśli wpisujesz pole od nowa: najlepiej wpisz je jednym ciągiem (bez zmiany formatowania w środku), inaczej Word może je „pociąć”.</li>
+    <li>{% if jest_adminem and user.is_staff %}Wgraj gotowy plik: <a href="{% url 'admin:szablony_szablondokumentu_add' %}">Administracja → Szablony dokumentów → Dodaj</a> (rodzaj: {{ nazwa_rodzaju }}). Program od razu sprawdzi, czy szablon działa.{% else %}Przekaż gotowy plik administratorowi – wgra go w Administracji.{% endif %}</li>
+    <li>Sprawdź efekt: <a href="{% url 'szablony:przyklad' rodzaj %}">pobierz przykład wypełniony wymyślonymi danymi</a>.</li>
+  </ol>
+  <p class="small text-muted mb-0">Obecnie używany szablon:
+    {% if aktywny %}<strong>{{ aktywny.nazwa }}</strong> (wgrany {{ aktywny.dodano|date:"d.m.Y" }}){% else %}<strong>wbudowany wzór</strong>{% endif %}</p>
+</div></div>
+
+<h2 class="h5">Dostępne pola</h2>
+{% for grupa, lista in pola %}
+<div class="card mb-2"><div class="card-body py-2">
+  <h3 class="h6">{{ grupa }}</h3>
+  <table class="table table-sm mb-0">
+  {% for kod, opis in lista %}<tr><td style="width:45%"><code>{% if kod.0 == "{" %}{{ kod }}{% else %}{% templatetag openvariable %} {{ kod }} {% templatetag closevariable %}{% endif %}</code></td><td>{{ opis }}</td></tr>{% endfor %}
+  </table>
+</div></div>
+{% endfor %}
+{% endblock %}

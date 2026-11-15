@@ -10,7 +10,7 @@ class BootstrapMixin:
             w = pole.widget
             if isinstance(w, forms.CheckboxInput):
                 w.attrs.setdefault("class", "form-check-input")
-            elif isinstance(w, forms.CheckboxSelectMultiple):
+            elif isinstance(w, (forms.CheckboxSelectMultiple, forms.RadioSelect)):
                 pass
             elif isinstance(w, (forms.Select, forms.SelectMultiple)):
                 w.attrs.setdefault("class", "form-select")

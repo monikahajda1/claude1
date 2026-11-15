@@ -17,7 +17,7 @@ from apps.konta import uprawnienia
 from .mixins import ModulMixin
 
 # Katalog w przesłanych plikach -> moduł, którego uprawnienia są potrzebne.
-MODUL_KATALOGU = {"bhp": "bhp"}
+MODUL_KATALOGU = {"bhp": "bhp", "szablony": "ustawienia"}
 
 
 @login_required
