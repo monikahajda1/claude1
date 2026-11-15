@@ -25,6 +25,12 @@ Skrót (gdy wszystko jest już zainstalowane):
 - Statusy, wersje po negocjacjach, notatki z kontaktów, przypomnienia po 7 dniach na „Co dziś?”
 - Statystyki skuteczności: miesiące, handlowcy, systemy, powody przegranych
 
+## Etap 3 – umowy
+- Przycisk „Utwórz budowę z oferty” w wygranej ofercie – dane i zakres prac przenoszą się same
+- Dane umowy: numer, wartość, sposób rozliczenia (obmiar / ryczałt), gwarancja, kaucja, kary, skan PDF
+- Aneksy aktualizują wartość i termin budowy
+- „Co dziś?” przypomina o braku skanu, zwrocie kaucji i końcu gwarancji
+
 Opis techniczny projektu i zasad: [CLAUDE.md](CLAUDE.md)
 
 Wszystkie dane w repozytorium są **fikcyjne**.

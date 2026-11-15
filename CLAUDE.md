@@ -43,6 +43,8 @@ apps/pulpit/       ekran „Co dziś?” (zadania.py – alerty budów i przypom
 apps/oferty/       PozycjaCennika, Oferta (numer OF/RRRR/NNNN + wersje /v2), Wariant, PozycjaOferty, Kontakt;
                    operacje.py (wysłanie, kontakt, wynik, nowa wersja), dokument.py (pola do Worda),
                    statystyki.py, dane_testowe.py (fikcyjny cennik i oferty)
+apps/umowy/        Umowa (1:1 z Budowa), PozycjaZakresu (zakres prac – podstawa rozliczeń), Aneks;
+                   operacje.py (utworz_budowe_z_oferty, zapisz_aneks), dane_testowe.py
 apps/szablony/     SzablonDokumentu (własne .docx wgrywane w adminie), generator.py (docxtpl),
                    pola.py (rejestr przykładowych danych/opisów pól), wbudowane/ (wzory + skrypt tworzący wzór)
 apps/core/         wspólne: mixiny uprawnień, formularze, PWA, ochrona plików, dziennik, komenda dane_testowe
@@ -67,6 +69,15 @@ docs/              instrukcje dla użytkowniczki
 - Statystyki tylko z aktualnych wersji; skuteczność = wygrane / (wygrane + przegrane).
 - Nowy rodzaj dokumentu Word: dodaj do `szablony.models.Rodzaj`, wzór do `wbudowane/`, wpis w `szablony/pola.py`.
 
+## Umowy – zasady
+- Etap „Oferta” usunięty z budów (migracja budowy 0003 zamienia go na „umowa”). Budowa zaczyna się od umowy.
+- Z wygranej oferty: zakres prac = pozycje wariantu wybranego, ceny pomniejszone o rabat oferty.
+- `Budowa.wartosc_netto` to kopia `Umowa.wartosc_aktualna` (umowa + aneksy) – synchronizuje `synchronizuj_budowe()`.
+- Aneks z nowym terminem ustawia `Budowa.data_zakonczenia`.
+- Moduł „umowy”: admin/handlowiec edytują, kierownik ogląda tylko swoje budowy (filtr `budowy_dla`), BHP nie widzi kwot.
+- Skany umów/aneksów: TYLKO przez `umowy:skan` (sprawdza dostęp do budowy); katalog „umowy” celowo nie jest w MODUL_KATALOGU.
+- „Co dziś?”: brak umowy na aktywnej budowie, brak skanu, zwrot kaucji (30 dni przed), koniec gwarancji (30 dni przed).
+
 ## Alerty BHP
 - Progi z `.env`: `ALERT_DNI_OSTRZEZENIE` (30), `ALERT_DNI_PILNE` (7).
 - Liczy się **najnowszy** dokument danego rodzaju; wymagany (`TypDokumentu.wymagany`) a brakujący → alert „brak dokumentu”.
@@ -75,7 +86,7 @@ docs/              instrukcje dla użytkowniczki
 ## Plan etapów
 1. ✅ ZAAKCEPTOWANY (warunkowo – skrypty .bat nie były jeszcze testowane na Windowsie; poprawki zgłoszone później naprawiać w dowolnym momencie) Instalacja, logowanie i role, lista budów z etapami, BHP (pracownicy, sprzęt, daty ważności), „Co dziś?”.
 2. ✅ ZAAKCEPTOWANY Oferty: kalkulator (m² × system, gruntowanie, cokoliki…), oferta z szablonu Word, statusy, follow-up (7 dni), statystyki skuteczności.
-3. ⏳ W TRAKCIE (pytania i plan) – Umowa: wygrana oferta → budowa.
+3. ✅ (do akceptacji) Umowa: wygrana oferta → budowa (przycisk w ofercie), dane umowy, zakres prac, aneksy, kaucje i gwarancje na „Co dziś?”.
 4. Wejście na budowę: IBWR i KZM z szablonów, checklista „czego brakuje” per budowa.
 5. Rozliczenia miesięczne: m² w miesiącu, % zaawansowania, kwota do faktury, protokół odbioru częściowego.
 6. Dokumentacja powykonawcza: jeden PDF ze spisem treści (karty techniczne, DoP, protokoły pomiarów, zdjęcia).
