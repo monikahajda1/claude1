@@ -1,0 +1,8 @@
+{% if uform.non_field_errors %}<div class="alert alert-danger">{{ uform.non_field_errors|join:" " }}</div>{% endif %}
+{% for nazwa, pola in uform.grupy %}
+<div class="card mb-3"><div class="card-body">
+  <h2 class="h6 text-muted">{{ nazwa }}</h2>
+  <div class="row g-3">{% for pole in pola %}{% include "_pole.html" %}{% endfor %}</div>
+  {% if forloop.first and tform %}<div class="row g-3 mt-0">{% for pole in tform %}{% include "_pole.html" %}{% endfor %}</div>{% endif %}
+</div></div>
+{% endfor %}

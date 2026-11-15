@@ -1,0 +1,11 @@
+<div class="card mb-2" data-wiersz><div class="card-body py-2">
+  {% for h in f.hidden_fields %}{{ h }}{% endfor %}
+  <div class="row g-2 align-items-end">
+    <div class="col-12 col-lg-4"><label class="form-label small mb-0">Nazwa</label>{{ f.nazwa }}{% for e in f.nazwa.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+    <div class="col-4 col-lg-2"><label class="form-label small mb-0">Jedn.</label>{{ f.jednostka }}</div>
+    <div class="col-4 col-lg-2"><label class="form-label small mb-0">Ilość</label>{{ f.ilosc }}{% for e in f.ilosc.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+    <div class="col-4 col-lg-3"><label class="form-label small mb-0">Cena netto</label>{{ f.cena_netto }}{% for e in f.cena_netto.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
+    <div class="col-12 col-lg-1 text-end"><span class="d-none">{{ f.DELETE }}</span><button type="button" class="btn btn-sm btn-outline-danger" data-usun title="Usuń">✕</button></div>
+    <div class="col-12"><details {% if f.opis.value %}open{% endif %}><summary class="small text-muted">opis</summary>{{ f.opis }}</details></div>
+  </div>
+</div></div>

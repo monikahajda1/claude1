@@ -109,6 +109,7 @@ class OfertaDetailView(ModulMixin, DetailView):
         ctx["kontakty"] = o.kontakty.select_related("kto")
         ctx["wersje"] = Oferta.objects.filter(numer=o.numer).order_by("wersja")
         ctx["edytuje"] = u.moze_edytowac(self.request.user, "oferty")
+        ctx["edytuje_umowy"] = u.moze_edytowac(self.request.user, "umowy")
         ctx["mozna_zmieniac_pozycje"] = o.status == Status.ROBOCZA and o.aktualna
         ctx["kontakt_form"] = KontaktForm(
             initial={"nastepny_kontakt": timezone.localdate() + timedelta(days=DNI_DO_KONTAKTU)}

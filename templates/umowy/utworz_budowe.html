@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% load pomocnicze %}
+{% block tytul %}Budowa z oferty {{ oferta.pelny_numer }}{% endblock %}
+{% block tresc %}
+<a href="{{ oferta.get_absolute_url }}" class="small">‹ {{ oferta.pelny_numer }} {{ oferta.nazwa }}</a>
+<h1 class="h3">Utwórz budowę z oferty</h1>
+<p class="text-muted">Dane są już wpisane z oferty – sprawdź je i uzupełnij informacje z podpisanej umowy.
+Zakres prac ({{ wariant.nazwa }}, {{ wariant.pozycje.count }} pozycji) skopiuje się automatycznie{% if oferta.rabat_procent %} – z ceną po rabacie {{ oferta.rabat_procent|floatformat:"-2" }}%{% endif %}.</p>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  <div class="card mb-3"><div class="card-body">
+    <h2 class="h6 text-muted">Budowa · klient: {{ oferta.klient }}</h2>
+    {% if bform.non_field_errors %}<div class="alert alert-danger">{{ bform.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="row g-3">{% for pole in bform %}{% include "_pole.html" %}{% endfor %}</div>
+  </div></div>
+  {% include "umowy/_umowa_pola.html" %}
+  <div class="d-flex gap-2 mb-4">
+    <button class="btn btn-firmowy">🏗 Utwórz budowę</button>
+    <a class="btn btn-outline-secondary" href="{{ oferta.get_absolute_url }}">Anuluj</a>
+  </div>
+</form>
+{% endblock %}

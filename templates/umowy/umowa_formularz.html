@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block tytul %}Umowa: {{ budowa.nazwa }}{% endblock %}
+{% block tresc %}
+<a href="{{ budowa.get_absolute_url }}" class="small">‹ {{ budowa.numer }} {{ budowa.nazwa }}</a>
+<h1 class="h3">Umowa – {{ budowa.nazwa }}</h1>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  {% include "umowy/_umowa_pola.html" %}
+  {% if uform.instance.skan %}<p class="small">Obecny skan: <a href="{% url 'umowy:skan' budowa.pk %}" target="_blank">otwórz</a> (wybierz nowy plik, aby podmienić).</p>{% endif %}
+  <div class="d-flex gap-2 mb-4">
+    <button class="btn btn-firmowy">Zapisz</button>
+    <a class="btn btn-outline-secondary" href="{{ budowa.get_absolute_url }}">Anuluj</a>
+  </div>
+</form>
+{% endblock %}

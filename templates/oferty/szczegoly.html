@@ -52,8 +52,9 @@
   {% else %}
     <div class="d-flex flex-wrap justify-content-between gap-2 align-items-center">
       <span>{{ o.get_status_display }} {{ o.data_rozstrzygniecia|date:"d.m.Y" }}{% if o.powod_przegranej %} – powód: <strong>{{ o.get_powod_przegranej_display }}</strong>{% if o.powod_opis %} ({{ o.powod_opis }}){% endif %}{% endif %}
-        {% if o.status == "wygrana" %}<br><small class="text-muted">W etapie 3 tutaj pojawi się przycisk „Utwórz budowę z oferty”.</small>{% endif %}</span>
-      <form method="post" action="{% url 'oferty:przywroc' o.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">Cofnij – przywróć do negocjacji</button></form>
+      </span>
+      {% if o.status == "wygrana" %}{% if o.budowa %}<a class="btn btn-success" href="{{ o.budowa.get_absolute_url }}">🏗 Budowa {{ o.budowa.numer }}</a>{% elif edytuje_umowy %}<a class="btn btn-success" href="{% url 'umowy:z_oferty' o.pk %}">🏗 Utwórz budowę z oferty</a>{% endif %}{% endif %}
+      {% if not o.budowa %}<form method="post" action="{% url 'oferty:przywroc' o.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">Cofnij – przywróć do negocjacji</button></form>{% endif %}
     </div>
   {% endif %}
 </div></div>

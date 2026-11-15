@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block tytul %}Zakres prac: {{ budowa.nazwa }}{% endblock %}
+{% block tresc %}
+<a href="{{ budowa.get_absolute_url }}" class="small">‹ {{ budowa.numer }} {{ budowa.nazwa }}</a>
+<h1 class="h3">Zakres prac z umowy</h1>
+<p class="text-muted">To podstawa rozliczeń miesięcznych. Zmieniaj ją tylko wtedy, gdy zmienia się umowa (np. aneksem).</p>
+<form method="post">{% csrf_token %}
+  {{ formset.management_form }}
+  {% if formset.non_form_errors %}<div class="alert alert-danger">{{ formset.non_form_errors|join:" " }}</div>{% endif %}
+  <div id="pozycje">{% for f in formset.forms %}{% include "umowy/_wiersz_zakresu.html" %}{% endfor %}</div>
+  <template id="wzor">{% with f=formset.empty_form %}{% include "umowy/_wiersz_zakresu.html" %}{% endwith %}</template>
+  <button type="button" class="btn btn-outline-primary mb-3" id="dodaj">+ Dodaj pozycję</button>
+  <div class="d-flex gap-2 mb-4">
+    <button class="btn btn-firmowy">Zapisz zakres</button>
+    <a class="btn btn-outline-secondary" href="{{ budowa.get_absolute_url }}">Anuluj</a>
+  </div>
+</form>
+{% endblock %}
+{% block skrypty %}
+<script>
+(function () {
+  var total = document.getElementById("id_zakres-TOTAL_FORMS");
+  function podlacz(w) {
+    w.querySelector("[data-usun]").addEventListener("click", function () {
+      w.querySelector('[name$="-DELETE"]').checked = true; w.style.display = "none";
+    });
+  }
+  document.querySelectorAll("[data-wiersz]").forEach(podlacz);
+  document.getElementById("dodaj").addEventListener("click", function () {
+    var tmp = document.createElement("div");
+    tmp.innerHTML = document.getElementById("wzor").innerHTML.replace(/__prefix__/g, total.value);
+    var w = tmp.firstElementChild;
+    document.getElementById("pozycje").appendChild(w);
+    total.value = parseInt(total.value, 10) + 1;
+    podlacz(w);
+  });
+})();
+</script>
+{% endblock %}

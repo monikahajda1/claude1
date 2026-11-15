@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block tytul %}Aneks: {{ budowa.nazwa }}{% endblock %}
+{% block tresc %}
+<a href="{{ budowa.get_absolute_url }}" class="small">‹ {{ budowa.numer }} {{ budowa.nazwa }}</a>
+<h1 class="h3">{% if form.instance.pk %}Edycja aneksu{% else %}Nowy aneks{% endif %}</h1>
+<p class="text-muted">Po zapisaniu wartość budowy i termin zakończenia zaktualizują się automatycznie.</p>
+<div class="card"><div class="card-body">
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  {% include "_pola.html" %}
+  {% if form.instance.skan %}<p class="small mt-2">Obecny skan: <a href="{% url 'umowy:skan_aneksu' budowa.pk form.instance.pk %}" target="_blank">otwórz</a></p>{% endif %}
+  <div class="mt-4 d-flex gap-2">
+    <button class="btn btn-firmowy">Zapisz aneks</button>
+    <a class="btn btn-outline-secondary" href="{{ budowa.get_absolute_url }}">Anuluj</a>
+  </div>
+</form>
+</div></div>
+{% endblock %}

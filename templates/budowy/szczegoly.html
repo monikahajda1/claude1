@@ -23,7 +23,8 @@
         <dt class="col-sm-5">Kierownik robót</dt><dd class="col-sm-7">{{ b.kierownik|default:"— brak —" }}</dd>
         <dt class="col-sm-5">System posadzki</dt><dd class="col-sm-7">{{ b.system_posadzki|default:"—" }}</dd>
         <dt class="col-sm-5">Powierzchnia</dt><dd class="col-sm-7">{% if b.powierzchnia_m2 %}{{ b.powierzchnia_m2|floatformat:"-2" }} m²{% else %}—{% endif %}</dd>
-        <dt class="col-sm-5">Wartość netto</dt><dd class="col-sm-7">{{ b.wartosc_netto|zl }}</dd>
+        {% if widzi_umowe %}<dt class="col-sm-5">Wartość netto</dt><dd class="col-sm-7">{{ b.wartosc_netto|zl }}</dd>{% endif %}
+        {% if oferty %}<dt class="col-sm-5">Z oferty</dt><dd class="col-sm-7">{% for o in oferty %}<a href="{{ o.get_absolute_url }}">{{ o.pelny_numer }}</a> {% endfor %}</dd>{% endif %}
         <dt class="col-sm-5">Termin</dt><dd class="col-sm-7">{{ b.data_rozpoczecia|date:"d.m.Y"|default:"?" }} – {{ b.data_zakonczenia|date:"d.m.Y"|default:"?" }}</dd>
       </dl>
       {% if b.uwagi %}<hr><p class="mb-0" style="white-space:pre-line">{{ b.uwagi }}</p>{% endif %}
@@ -57,8 +58,72 @@
   {% endif %}
 </div>
 
+
+{% if widzi_umowe %}
+<div class="card mt-3"><div class="card-body">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <h2 class="h5 mb-0">Umowa</h2>
+    {% if edytuje_umowe %}<span class="d-flex gap-2 flex-wrap">
+      <a class="btn btn-sm btn-outline-primary" href="{% url 'umowy:edytuj' b.pk %}">{% if umowa %}Edytuj umowę{% else %}+ Uzupełnij dane umowy{% endif %}</a>
+      {% if umowa %}<a class="btn btn-sm btn-outline-primary" href="{% url 'umowy:aneks_nowy' b.pk %}">+ Aneks</a>{% endif %}
+    </span>{% endif %}
+  </div>
+  {% if umowa %}
+  <div class="row">
+    <div class="col-md-6"><dl class="row small mb-0">
+      <dt class="col-6">Numer umowy</dt><dd class="col-6">{{ umowa.numer|default:"—" }}</dd>
+      <dt class="col-6">Data podpisania</dt><dd class="col-6">{{ umowa.data_podpisania|date:"d.m.Y"|default:"—" }}</dd>
+      <dt class="col-6">Wartość z umowy</dt><dd class="col-6">{{ umowa.wartosc_netto|zl }} netto</dd>
+      {% if umowa.aneksy.all %}<dt class="col-6">Po aneksach</dt><dd class="col-6 fw-bold">{{ umowa.wartosc_aktualna|zl }} netto</dd>{% endif %}
+      <dt class="col-6">Brutto (VAT {{ umowa.vat_procent }}%)</dt><dd class="col-6">{{ umowa.wartosc_brutto|zl }}</dd>
+      <dt class="col-6">Rozliczenie</dt><dd class="col-6">{{ umowa.get_sposob_rozliczenia_display }}</dd>
+      <dt class="col-6">Płatność</dt><dd class="col-6">{{ umowa.termin_platnosci_dni }} dni</dd>
+      {% if umowa.kary_umowne %}<dt class="col-6">Kary umowne</dt><dd class="col-6">{{ umowa.kary_umowne }}</dd>{% endif %}
+    </dl></div>
+    <div class="col-md-6"><dl class="row small mb-0">
+      <dt class="col-6">Odbiór końcowy</dt><dd class="col-6">{{ umowa.data_odbioru_koncowego|date:"d.m.Y"|default:"—" }}</dd>
+      <dt class="col-6">Gwarancja</dt><dd class="col-6">{% if umowa.gwarancja_miesiecy %}{{ umowa.gwarancja_miesiecy }} mies.{% if umowa.koniec_gwarancji %} – do {{ umowa.koniec_gwarancji|date:"d.m.Y" }}{% endif %}{% else %}—{% endif %}</dd>
+      <dt class="col-6">Zabezpieczenie</dt><dd class="col-6">{{ umowa.get_zabezpieczenie_forma_display }}{% if umowa.zabezpieczenie_procent %} {{ umowa.zabezpieczenie_procent|floatformat:"-2" }}% = {{ umowa.zabezpieczenie_kwota|zl }}{% endif %}</dd>
+      {% if umowa.zabezpieczenie_procent %}
+      <dt class="col-6">Zwrot cz. 1</dt><dd class="col-6">{{ umowa.zwrot1_kwota|zl }} – {{ umowa.zwrot1_data|date:"d.m.Y"|default:"termin ?" }} {% if umowa.zwrot1_zwrocono %}<span class="badge text-bg-success">zwrócono</span>{% endif %}</dd>
+      <dt class="col-6">Zwrot cz. 2</dt><dd class="col-6">{{ umowa.zwrot2_kwota|zl }} – {{ umowa.zwrot2_data|date:"d.m.Y"|default:"termin ?" }} {% if umowa.zwrot2_zwrocono %}<span class="badge text-bg-success">zwrócono</span>{% endif %}</dd>
+      {% endif %}
+      <dt class="col-6">Skan umowy</dt><dd class="col-6">{% if umowa.skan %}<a href="{% url 'umowy:skan' b.pk %}" target="_blank">otwórz</a>{% else %}<span class="badge text-bg-warning">brak skanu</span>{% endif %}</dd>
+    </dl></div>
+  </div>
+  {% if umowa.uwagi %}<p class="small mt-2 mb-0" style="white-space:pre-line">{{ umowa.uwagi }}</p>{% endif %}
+
+  {% if umowa.aneksy.all %}
+  <h3 class="h6 mt-3">Aneksy</h3>
+  <ul class="list-unstyled small mb-0">
+    {% for a in umowa.aneksy.all %}<li class="border-bottom py-1">
+      <strong>{{ a }}</strong>{% if a.zmiana_wartosci %} · {% if a.zmiana_wartosci > 0 %}+{% endif %}{{ a.zmiana_wartosci|zl }}{% endif %}{% if a.nowy_termin_zakonczenia %} · nowy termin {{ a.nowy_termin_zakonczenia|date:"d.m.Y" }}{% endif %}
+      {% if a.skan %} · <a href="{% url 'umowy:skan_aneksu' b.pk a.pk %}" target="_blank">skan</a>{% endif %}
+      {% if edytuje_umowe %} · <a href="{% url 'umowy:aneks' b.pk a.pk %}">edytuj</a>{% endif %}<br>{{ a.opis }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+  {% else %}
+  <p class="text-muted mb-0">Brak danych umowy.{% if edytuje_umowe %} Uzupełnij je, żeby pilnować terminów, gwarancji i kaucji.{% endif %}</p>
+  {% endif %}
+</div></div>
+
+<div class="card mt-3"><div class="card-body">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <h2 class="h5 mb-0">Zakres prac z umowy</h2>
+    {% if edytuje_umowe %}<a class="btn btn-sm btn-outline-primary" href="{% url 'umowy:zakres' b.pk %}">Edytuj zakres</a>{% endif %}
+  </div>
+  {% if zakres %}
+  <div class="table-responsive"><table class="table table-sm mb-1">
+    <thead><tr><th>Pozycja</th><th class="text-end">Ilość</th><th class="text-end">Cena netto</th><th class="text-end">Wartość</th></tr></thead>
+    <tbody>{% for p in zakres %}<tr><td>{{ p.nazwa }}</td><td class="text-end text-nowrap">{{ p.ilosc|floatformat:"-2" }} {{ p.get_jednostka_display }}</td><td class="text-end text-nowrap">{{ p.cena_netto|zl }}</td><td class="text-end text-nowrap">{{ p.wartosc|zl }}</td></tr>{% endfor %}</tbody>
+    <tfoot><tr><th colspan="3" class="text-end">Razem</th><th class="text-end text-nowrap">{{ suma_zakresu|zl }}</th></tr></tfoot>
+  </table></div>
+  {% if umowa and roznica_zakresu %}<p class="small text-muted mb-0">Różnica względem wartości umowy: {{ roznica_zakresu|zl }}{% if roznica_zakresu < 1 and roznica_zakresu > -1 %} (zaokrąglenia – w porządku){% else %} – np. zmiany z aneksów; jeśli trzeba, popraw zakres.{% endif %}</p>{% endif %}
+  {% else %}<p class="text-muted mb-0">Brak pozycji zakresu. Przy budowie utworzonej z oferty uzupełniają się same; tu możesz je wpisać ręcznie.</p>{% endif %}
+</div></div>
+{% endif %}
 <div class="card mt-3"><div class="card-body text-muted small">
-  W kolejnych etapach pojawią się tu: oferta i kalkulacja, dokumenty wejścia na budowę (IBWR, KZM, checklista), rozliczenia miesięczne i dokumentacja powykonawcza.
+  W kolejnych etapach pojawią się tu: dokumenty wejścia na budowę (IBWR, KZM, checklista), rozliczenia miesięczne i dokumentacja powykonawcza.
 </div></div>
 {% include "_historia.html" %}
 {% endwith %}
