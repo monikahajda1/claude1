@@ -115,6 +115,11 @@ class Command(BaseCommand):
             if etap in (Etap.REALIZACJA, Etap.PRZYGOTOWANIE, Etap.ROZLICZENIE):
                 b.pracownicy.set(random.sample(pracownicy[:10], 4))
                 b.sprzet.set(random.sample(sprzet, 3))
+        from apps.oferty.dane_testowe import wczytaj_oferty
+
+        handlowcy = list(Uzytkownik.objects.filter(username__in=["handlowiec_demo", "admin_demo"])) if opts["konta"] else []
+        oferty = wczytaj_oferty(klienci, handlowcy, dzis)
+        self.stdout.write(self.style.SUCCESS(f"Oferty: {len(oferty)} (+ cennik)."))
         self.stdout.write(self.style.SUCCESS(
             f"Gotowe: {len(klienci)} klientów, {len(BUDOWY)} budów, {len(pracownicy)} pracowników, {len(sprzet)} sztuk sprzętu."
         ))
