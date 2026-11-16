@@ -30,6 +30,12 @@ MACIERZ = {
     "umowy": ({ADMINISTRATOR, HANDLOWIEC, KIEROWNIK}, {ADMINISTRATOR, HANDLOWIEC}),
     # Cennik widzą handlowcy (do kalkulacji), zmienia go administrator.
     "cennik": ({ADMINISTRATOR, HANDLOWIEC}, {ADMINISTRATOR}),
+    # Etap 4 – wejście na budowę. Kierownik zawsze tylko swoje budowy (filtr budowy_dla).
+    "materialy": ({ADMINISTRATOR, HANDLOWIEC, BHP, KIEROWNIK}, {ADMINISTRATOR}),
+    "kzm": ({ADMINISTRATOR, HANDLOWIEC, BHP, KIEROWNIK}, {ADMINISTRATOR, KIEROWNIK}),
+    "ibwr": ({ADMINISTRATOR, BHP, KIEROWNIK}, {ADMINISTRATOR, BHP}),
+    "checklista": ({ADMINISTRATOR, HANDLOWIEC, BHP, KIEROWNIK}, {ADMINISTRATOR, BHP, KIEROWNIK}),
+    "firma": ({ADMINISTRATOR, HANDLOWIEC, BHP}, {ADMINISTRATOR, BHP}),
     "statystyki": ({ADMINISTRATOR, HANDLOWIEC}, set()),
     # Szablony dokumentów Word, ustawienia systemowe.
     "ustawienia": ({ADMINISTRATOR}, {ADMINISTRATOR}),
