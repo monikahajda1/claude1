@@ -1,3 +1,4 @@
+from django.utils.http import content_disposition_header
 from django.http import FileResponse, Http404, HttpResponse
 from django.views import View
 from django.views.generic import TemplateView
@@ -10,7 +11,7 @@ from .models import Rodzaj, SzablonDokumentu
 from .pola import OPISY_POL, PRZYKLADY
 
 # Kto może oglądać pola i pobierać wzory danego rodzaju szablonu.
-MODUL_RODZAJU = {"oferta": "oferty"}
+MODUL_RODZAJU = {"oferta": "oferty", "kzm": "kzm", "ibwr": "ibwr"}
 
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
@@ -57,7 +58,7 @@ class PrzykladView(RodzajMixin, View):
 
     def get(self, request, rodzaj):
         odp = HttpResponse(generuj(rodzaj, PRZYKLADY[rodzaj]()), content_type=DOCX)
-        odp["Content-Disposition"] = f'attachment; filename="przyklad_{rodzaj}.docx"'
+        odp["Content-Disposition"] = content_disposition_header(True, f"przyklad_{rodzaj}.docx")
         return odp
 
 

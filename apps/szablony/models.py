@@ -9,6 +9,8 @@ class Rodzaj(models.TextChoices):
     """Rodzaje dokumentów generowanych z szablonów Word. Kolejne dojdą w następnych etapach."""
 
     OFERTA = "oferta", "Oferta"
+    KZM = "kzm", "KZM – karta zatwierdzenia materiału"
+    IBWR = "ibwr", "IBWR – instrukcja bezpiecznego wykonywania robót"
 
 
 def sciezka_szablonu(instance, filename):
