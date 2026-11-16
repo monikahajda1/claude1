@@ -124,6 +124,13 @@ class Command(BaseCommand):
         umowy_dla_budow(dzis)
         budowy_z_ofert(kierownicy, dzis)
         self.stdout.write(self.style.SUCCESS("Umowy: dodane do budów; 3 wygrane oferty zamienione w budowy."))
+
+        from apps.wejscie.dane_testowe import wczytaj_dokumenty_firmy, wczytaj_materialy, wczytaj_wejscia
+
+        wczytaj_materialy(dzis)
+        wczytaj_dokumenty_firmy(dzis)
+        wczytaj_wejscia(dzis)
+        self.stdout.write(self.style.SUCCESS("Wejście na budowę: materiały z dokumentami, KZM, IBWR, checklisty, dokumenty firmy."))
         self.stdout.write(self.style.SUCCESS(
             f"Gotowe: {len(klienci)} klientów, {Budowa.objects.count()} budów, {len(pracownicy)} pracowników, {len(sprzet)} sztuk sprzętu."
         ))
