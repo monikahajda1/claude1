@@ -23,6 +23,19 @@ Za pierwszym razem zajmie to ok. 30–60 minut (głównie czekanie na pobieranie
 2. Uruchom pobrany plik `Git-....exe`.
 3. Klikaj **Next** – domyślne ustawienia są dobre. Na końcu **Install**, potem **Finish**.
 
+## Krok 1a. Włącz WSL (podsystem Linux – potrzebny Dockerowi)
+
+1. Kliknij **Start**, wpisz `PowerShell`.
+2. Na wyniku **Windows PowerShell** kliknij **prawym** przyciskiem → **Uruchom jako administrator** → **Tak**.
+3. W niebieskim oknie wpisz (lub wklej prawym przyciskiem myszy) i naciśnij Enter:
+   ```
+   wsl --install --no-distribution
+   ```
+   Jeśli zamiast instalacji pojawi się długa lista opcji (starszy Windows), wpisz samo `wsl --install`.
+4. Poczekaj na komunikat o zakończeniu i **uruchom ponownie komputer**.
+5. Jeśli po restarcie otworzy się okno „Ubuntu” z prośbą o nazwę użytkownika – możesz je po prostu zamknąć
+   (aplikacja go nie potrzebuje).
+
 ## Krok 2. Zainstaluj Docker Desktop
 
 1. Wejdź na **https://www.docker.com/products/docker-desktop/** i kliknij
