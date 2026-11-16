@@ -56,6 +56,14 @@ class OperacjeTest(BazaUmow):
         self.assertEqual(operacje.suma_zakresu(b), Decimal("81000.00"))
         self.assertEqual(b.wartosc_netto, Decimal("81000"))
 
+    def test_materialy_z_oferty_trafiaja_na_budowe(self):
+        from apps.materialy.models import Material
+
+        m = Material.objects.create(nazwa="Grunt", producent="Fikcja")
+        m.systemy.add(PozycjaCennika.objects.get(nazwa="Epoksyd 2 mm"))
+        b = self.utworz()
+        self.assertEqual([mb.material for mb in b.materialy.all()], [m])
+
     def test_podpowiedzi_z_oferty(self):
         d = operacje.dane_poczatkowe_z_oferty(self.oferta)
         self.assertEqual(d["umowa"]["wartosc_netto"], Decimal("81000.00"))

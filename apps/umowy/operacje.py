@@ -48,6 +48,9 @@ def utworz_budowe_z_oferty(oferta, budowa, umowa):
     umowa.budowa = budowa
     umowa.save()
     kopiuj_zakres(oferta, budowa)
+    from apps.materialy.operacje import uzupelnij_z_zakresu
+
+    uzupelnij_z_zakresu(budowa)  # materiały „wiedzą” o budowie od razu (pod KZM i IBWR)
     oferta.budowa = budowa
     oferta.save(update_fields=["budowa"])
     umowa.synchronizuj_budowe()

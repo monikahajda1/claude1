@@ -1,0 +1,7 @@
+from django.apps import AppConfig
+
+
+class MaterialyConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "apps.materialy"
+    verbose_name = "Materiały"

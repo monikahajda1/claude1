@@ -129,7 +129,10 @@ class ZakresView(BudowaMixin, TemplateView):
                 kolejnosc += 1
                 poz.kolejnosc = kolejnosc
                 poz.save()
-            messages.success(request, "Zapisano zakres prac.")
+            from apps.materialy.operacje import uzupelnij_z_zakresu
+
+            dodane = uzupelnij_z_zakresu(self.budowa)
+            messages.success(request, "Zapisano zakres prac." + (f" Dodano {dodane} materiał(y) do listy materiałów budowy." if dodane else ""))
             return redirect(self.budowa)
         messages.error(request, "Popraw zaznaczone pola.")
         return self.render_to_response(self.get_context_data(formset=formset, budowa=self.budowa))
