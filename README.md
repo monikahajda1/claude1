@@ -31,6 +31,14 @@ Skrót (gdy wszystko jest już zainstalowane):
 - Aneksy aktualizują wartość i termin budowy
 - „Co dziś?” przypomina o braku skanu, zwrocie kaucji i końcu gwarancji
 
+## Etap 4 – wejście na budowę
+- Biblioteka materiałów: karta techniczna, DoP, karta charakterystyki, atest – wgrywane raz, używane wszędzie
+- Materiały budowy uzupełniają się same z zakresu prac (systemy z cennika ↔ materiały)
+- KZM: jedna na materiał, statusy, karta w Wordzie + osobno paczka ZIP z dokumentami materiału
+- IBWR z ekipą, sprzętem, materiałami chemicznymi i biblioteką zagrożeń (Word)
+- Checklista „czego brakuje” na każdej budowie (punkty automatyczne i ręczne), dokumenty firmy (polisa OC…)
+- „Co dziś?”: budowy startujące z niepełną checklistą, wygasające dokumenty firmy i materiałów
+
 Opis techniczny projektu i zasad: [CLAUDE.md](CLAUDE.md)
 
 Wszystkie dane w repozytorium są **fikcyjne**.

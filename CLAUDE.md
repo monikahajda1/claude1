@@ -45,6 +45,10 @@ apps/oferty/       PozycjaCennika, Oferta (numer OF/RRRR/NNNN + wersje /v2), War
                    statystyki.py, dane_testowe.py (fikcyjny cennik i oferty)
 apps/umowy/        Umowa (1:1 z Budowa), PozycjaZakresu (zakres prac – podstawa rozliczeń), Aneks;
                    operacje.py (utworz_budowe_z_oferty, zapisz_aneks), dane_testowe.py
+apps/materialy/    Material (+ dokumenty: karta techn., DoP, SDS, atest), powiązanie z pozycjami cennika,
+                   MaterialBudowy (lista materiałów budowy, uzupełniana z zakresu prac), operacje.py
+apps/wejscie/      KZM, Zagrozenie (biblioteka), IBWR, PunktChecklisty + OdhaczeniePunktu, DokumentFirmy;
+                   checklista.py (punkty automatyczne + ręczne), dokumenty.py (pola do Worda KZM/IBWR), dane_testowe.py
 apps/szablony/     SzablonDokumentu (własne .docx wgrywane w adminie), generator.py (docxtpl),
                    pola.py (rejestr przykładowych danych/opisów pól), wbudowane/ (wzory + skrypt tworzący wzór)
 apps/core/         wspólne: mixiny uprawnień, formularze, PWA, ochrona plików, dziennik, komenda dane_testowe
@@ -78,6 +82,18 @@ docs/              instrukcje dla użytkowniczki
 - Skany umów/aneksów: TYLKO przez `umowy:skan` (sprawdza dostęp do budowy); katalog „umowy” celowo nie jest w MODUL_KATALOGU.
 - „Co dziś?”: brak umowy na aktywnej budowie, brak skanu, zwrot kaucji (30 dni przed), koniec gwarancji (30 dni przed).
 
+## Wejście na budowę – zasady
+- Materiał ma dokumenty wgrywane RAZ; „aktualny” = najnowszy danego typu. Wymagane: karta techn. + DoP (+ SDS gdy chemiczny).
+- Materiały budowy: z zakresu prac (pozycja cennika → `Material.systemy`) + ręcznie; wykluczonych nie przywracamy automatycznie.
+  Uzupełnianie: przy tworzeniu budowy z oferty, po zapisie zakresu prac, przyciskiem.
+- KZM: jedna na materiał; Word (karta) i ZIP (TYLKO dokumenty materiału, bez karty) pobierane osobno – życzenie użytkowniczki.
+- IBWR: ekipa, sprzęt, zakres (BEZ cen), materiały chemiczne, zagrożenia z biblioteki + dodatkowe – wszystko z danych budowy.
+- Checklista (`wejscie/checklista.py`): punkty automatyczne + ręczne (lista w panelu). Linki tylko do stron dostępnych dla użytkownika.
+- Uprawnienia: materiały – edytuje admin; KZM – admin + kierownik (swoje); IBWR – admin + BHP; checklista – admin, BHP, kierownik;
+  dokumenty firmy – admin + BHP. Pliki KZM/IBWR/checklisty tylko przez `wejscie:plik` (sprawdza dostęp do budowy).
+- „Co dziś?”: start ≤14 dni + niepełna checklista; wygasające dokumenty firmy i materiałów (np. atest).
+- CZEKAMY na zanonimizowane wzory IBWR i KZM od użytkowniczki – na razie wbudowane wzory (`szablony/wbudowane/utworz_wzory_wejscia.py`).
+
 ## Alerty BHP
 - Progi z `.env`: `ALERT_DNI_OSTRZEZENIE` (30), `ALERT_DNI_PILNE` (7).
 - Liczy się **najnowszy** dokument danego rodzaju; wymagany (`TypDokumentu.wymagany`) a brakujący → alert „brak dokumentu”.
@@ -87,7 +103,7 @@ docs/              instrukcje dla użytkowniczki
 1. ✅ ZAAKCEPTOWANY (warunkowo – skrypty .bat nie były jeszcze testowane na Windowsie; poprawki zgłoszone później naprawiać w dowolnym momencie) Instalacja, logowanie i role, lista budów z etapami, BHP (pracownicy, sprzęt, daty ważności), „Co dziś?”.
 2. ✅ ZAAKCEPTOWANY Oferty: kalkulator (m² × system, gruntowanie, cokoliki…), oferta z szablonu Word, statusy, follow-up (7 dni), statystyki skuteczności.
 3. ✅ ZAAKCEPTOWANY Umowa: wygrana oferta → budowa (przycisk w ofercie), dane umowy, zakres prac, aneksy, kaucje i gwarancje na „Co dziś?”.
-4. ⏳ W TRAKCIE (pytania i plan) – Wejście na budowę: IBWR i KZM z szablonów, checklista „czego brakuje” per budowa.
+4. ✅ (do akceptacji) Wejście na budowę: IBWR i KZM z szablonów, checklista „czego brakuje” per budowa.
 5. Rozliczenia miesięczne: m² w miesiącu, % zaawansowania, kwota do faktury, protokół odbioru częściowego.
 6. Dokumentacja powykonawcza: jeden PDF ze spisem treści (karty techniczne, DoP, protokoły pomiarów, zdjęcia).
 Pomysły na później: blokada po wielu nieudanych logowaniach (django-axes), automatyczne kopie (Harmonogram zadań Windows).
