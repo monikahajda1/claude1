@@ -17,7 +17,7 @@ class ZadanieBudowy:
     waga: int
 
 
-def zadania_budow(budowy, dzis=None, z_bhp=False):
+def zadania_budow(budowy, dzis=None, z_bhp=False, z_checklista=False):
     dzis = dzis or timezone.localdate()
     wynik = []
     for b in budowy.prefetch_related("pracownicy").select_related("klient", "kierownik"):
@@ -30,8 +30,25 @@ def zadania_budow(budowy, dzis=None, z_bhp=False):
             if dni < 0:
                 wynik.append(ZadanieBudowy(b, f"Planowany start był {-dni} dni temu, a budowa nie jest jeszcze „w realizacji”.", "warning", 2))
             elif dni <= DNI_PRZED_STARTEM:
-                tekst = "Start dziś!" if dni == 0 else f"Start za {dni} dni – sprawdź dokumenty wejścia na budowę."
-                wynik.append(ZadanieBudowy(b, tekst, "danger" if dni <= 3 else "info", 1 if dni <= 3 else 3))
+                tekst = "Start dziś!" if dni == 0 else f"Start za {dni} dni"
+                kolor, waga = ("danger", 1) if dni <= 3 else ("info", 3)
+                if z_checklista:
+                    from apps.wejscie.checklista import checklista, podsumowanie
+
+                    punkty = checklista(b, dzis)
+                    s = podsumowanie(punkty)
+                    if s["komplet"]:
+                        tekst += " – checklista wejścia kompletna ✔"
+                        kolor, waga = "success", 4
+                    else:
+                        braki = [p.nazwa for p in punkty if not p.ok]
+                        opis = ", ".join(braki[:3]) + (f" i {len(braki) - 3} innych" if len(braki) > 3 else "")
+                        tekst += f" – checklista wejścia: brakuje {s['brakuje']} z {s['wszystkie']} ({opis})."
+                        kolor = "danger" if dni <= 7 else "warning"
+                        waga = 1 if dni <= 7 else 2
+                else:
+                    tekst += " – sprawdź dokumenty wejścia na budowę."
+                wynik.append(ZadanieBudowy(b, tekst, kolor, waga))
         if aktywna and b.kierownik_id is None:
             wynik.append(ZadanieBudowy(b, "Brak przypisanego kierownika robót.", "warning", 2))
         if z_bhp and b.etap in (Etap.PRZYGOTOWANIE, Etap.REALIZACJA) and not b.pracownicy.all():
@@ -110,4 +127,34 @@ def zadania_umow(budowy, dzis=None):
             tekst, kolor, waga = _termin("Koniec gwarancji", koniec, dzis)
             wynik.append(ZadanieBudowy(b, tekst + " – zaplanuj przegląd gwarancyjny.", kolor, waga))
     wynik.sort(key=lambda z: z.waga)
+    return wynik
+
+
+def zadania_dokumentow(dzis=None, firma=True, materialy=True):
+    """Wygasające dokumenty firmy (polisa OC…) i dokumenty materiałów (np. atesty)."""
+    from apps.bhp.terminy import status_terminu
+    from apps.materialy.models import Material
+    from apps.wejscie.models import DokumentFirmy
+
+    dzis = dzis or timezone.localdate()
+    wynik = []
+    if firma:
+        # Polisa, KRS, ZUS, US: liczy się najnowszy dokument danego rodzaju (stara polisa nie alarmuje).
+        # Pozostałe (certyfikaty, inne) – każdy osobno.
+        najnowsze = {}
+        for d in DokumentFirmy.objects.exclude(data_waznosci=None).order_by("data_waznosci"):
+            klucz = d.rodzaj if d.rodzaj in ("polisa_oc", "krs", "zus", "us") else f"{d.rodzaj}-{d.pk}"
+            najnowsze[klucz] = d
+        for d in najnowsze.values():
+            st = status_terminu(d.data_waznosci, dzis)
+            if st.alert:
+                wynik.append({"tekst": f"{d.nazwa}: {st.opis}", "kolor": st.kolor, "url": "/wejscie/firma/", "waga": st.waga})
+    if materialy:
+        for m in Material.objects.filter(aktywny=True).prefetch_related("dokumenty"):
+            for d in m.aktualne_dokumenty().values():
+                if d.data_waznosci:
+                    st = status_terminu(d.data_waznosci, dzis)
+                    if st.alert:
+                        wynik.append({"tekst": f"{m.nazwa} – {d.get_typ_display()}: {st.opis}", "kolor": st.kolor, "url": m.get_absolute_url(), "waga": st.waga})
+    wynik.sort(key=lambda x: x["waga"])
     return wynik

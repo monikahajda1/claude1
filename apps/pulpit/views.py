@@ -5,7 +5,7 @@ from django.views.generic import TemplateView
 from apps.budowy.models import ETAPY_AKTYWNE, Etap
 from apps.konta import uprawnienia as u
 
-from .zadania import zadania_budow, zadania_ofert, zadania_umow
+from .zadania import zadania_budow, zadania_dokumentow, zadania_ofert, zadania_umow
 
 
 class CoDzisView(LoginRequiredMixin, TemplateView):
@@ -20,7 +20,7 @@ class CoDzisView(LoginRequiredMixin, TemplateView):
 
         if u.moze_widziec(user, "budowy"):
             budowy = u.budowy_dla(user)
-            zadania = zadania_budow(budowy, dzis, z_bhp=widzi_bhp)
+            zadania = zadania_budow(budowy, dzis, z_bhp=widzi_bhp, z_checklista=u.moze_widziec(user, "checklista"))
             if u.moze_widziec(user, "umowy"):
                 zadania += zadania_umow(budowy, dzis)
             ctx["zadania_budow"] = sorted(zadania, key=lambda z: z.waga)
@@ -37,6 +37,10 @@ class CoDzisView(LoginRequiredMixin, TemplateView):
                 oferty = oferty.filter(handlowiec=user)
             ctx["zadania_ofert"] = zadania_ofert(oferty, dzis)
             ctx["oferty_do_kontaktu"] = sum(1 for z in ctx["zadania_ofert"] if z.waga < 2)
+
+        widzi_firma, edytuje_materialy = u.moze_widziec(user, "firma"), u.moze_edytowac(user, "materialy")
+        if widzi_firma or edytuje_materialy:
+            ctx["zadania_dokumentow"] = zadania_dokumentow(dzis, firma=widzi_firma, materialy=edytuje_materialy or widzi_bhp)
 
         if widzi_bhp:
             from apps.bhp.alerty import alerty_bhp

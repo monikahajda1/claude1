@@ -66,6 +66,11 @@
 {% else %}<p class="text-success">✓ Brak pilnych spraw na budowach.</p>{% endif %}
 {% endif %}
 
+{% if zadania_dokumentow %}
+<h2 class="h5">Dokumenty firmy i materiałów</h2>
+<ul class="list-group alert-lista mb-4">{% for z in zadania_dokumentow %}<li class="list-group-item border-{{ z.kolor }}"><a href="{{ z.url }}">{{ z.tekst }}</a></li>{% endfor %}</ul>
+{% endif %}
+
 {% if widzi.bhp %}
 <h2 class="h5" id="pilne">BHP – pilne (wygasłe, brakujące, wygasające w ciągu 7 dni)</h2>
 {% include "bhp/_alerty.html" with alerty=alerty_pilne pusto="✓ Brak pilnych spraw BHP." %}

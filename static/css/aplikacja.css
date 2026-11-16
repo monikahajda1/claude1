@@ -26,3 +26,4 @@ body { background: #f4f6f9; }
   table.responsywna td[data-etykieta]::before { content: attr(data-etykieta) ": "; font-weight: 600; color: #6c757d; }
 }
 @media print { nav, .no-print, .btn { display: none !important; } body { background: #fff; } }
+.alert-lista .border-success { border-left-color: #198754 !important; }
