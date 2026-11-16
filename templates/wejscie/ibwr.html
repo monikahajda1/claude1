@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block tytul %}IBWR: {{ budowa.nazwa }}{% endblock %}
+{% block tresc %}
+<a href="{% url 'wejscie:budowa' budowa.pk %}" class="small">‹ Wejście na budowę: {{ budowa.nazwa }}</a>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+  <h1 class="h3 mb-0">IBWR – {{ budowa.nazwa }}</h1>
+  {% if ibwr %}<a class="btn btn-outline-primary" href="{% url 'wejscie:ibwr_dokument' budowa.pk %}">⬇ IBWR (Word)</a>{% endif %}
+</div>
+<p class="text-muted small">Ekipa, sprzęt, zakres prac i materiały chemiczne wpiszą się do dokumentu same – z danych tej budowy. Tu wybierasz tylko zagrożenia i status.</p>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+<div class="card mb-3"><div class="card-body">
+  <div class="row g-3">
+    {% for pole in form.visible_fields %}{% if pole.name == "zagrozenia" %}
+    <div class="col-12"><label class="form-label">Zagrożenia (biblioteka – zmieniana w Administracji)</label>
+      <div class="checkbox-lista border rounded p-2 bg-white" style="max-height:none">{{ pole }}</div></div>
+    {% else %}{% include "_pole.html" %}{% endif %}{% endfor %}
+  </div>
+  {% if ibwr.skan %}<p class="small mt-2">Obecny skan: <a href="{% url 'wejscie:plik' 'ibwr' ibwr.pk %}" target="_blank">otwórz</a></p>{% endif %}
+</div></div>
+{% if edytuje %}<div class="d-flex gap-2 mb-4 flex-wrap">
+  <button class="btn btn-firmowy">Zapisz</button>
+  <button class="btn btn-outline-primary" name="pobierz" value="1">Zapisz i pobierz Word</button>
+  <a class="btn btn-outline-secondary" href="{% url 'wejscie:budowa' budowa.pk %}">Anuluj</a>
+</div>{% endif %}
+</form>
+{% endblock %}
+{% block skrypty %}{% if not edytuje %}<script>document.querySelectorAll("form input, form select, form textarea").forEach(function(e){ if(e.name!=="csrfmiddlewaretoken") e.disabled = true; });</script>{% endif %}{% endblock %}

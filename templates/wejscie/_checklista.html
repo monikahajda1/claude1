@@ -1,0 +1,26 @@
+<ul class="list-group list-group-flush">
+{% for p in punkty %}
+  <li class="list-group-item px-0">
+    <div class="d-flex gap-2 align-items-start">
+      <span class="fs-5 lh-1 {% if p.ok %}text-success{% else %}text-danger{% endif %}">{% if p.ok %}✔{% else %}✘{% endif %}</span>
+      <div class="flex-grow-1">
+        <span class="{% if p.nie_dotyczy %}text-muted text-decoration-line-through{% endif %}">{% if p.link and not pelna %}<a href="{{ p.link }}" class="text-reset">{{ p.nazwa }}</a>{% else %}{{ p.nazwa }}{% endif %}</span>
+        {% if p.reczny %}<span class="badge text-bg-light border">ręczny</span>{% endif %}
+        {% if p.szczegoly %}<br><small class="text-muted">{{ p.szczegoly }}</small>{% endif %}
+        {% if p.odhaczenie and p.odhaczenie.data %}<br><small class="text-muted">{{ p.odhaczenie.data|date:"d.m.Y" }}{% if p.odhaczenie.kto %} – {{ p.odhaczenie.kto }}{% endif %}{% if p.odhaczenie.plik %} · <a href="{% url 'wejscie:plik' 'punkt' p.odhaczenie.pk %}" target="_blank">załącznik</a>{% endif %}</small>{% endif %}
+        {% if pelna and p.reczny and edytuje_check %}
+        <details class="mt-1"><summary class="small text-primary">zmień</summary>
+          <form method="post" action="{% url 'wejscie:odhacz' budowa.pk p.punkt_id %}" enctype="multipart/form-data" class="row g-2 mt-1">{% csrf_token %}
+            <div class="col-auto form-check form-switch ms-2"><input class="form-check-input" type="checkbox" name="zrobione" id="z{{ p.punkt_id }}" {% if p.odhaczenie.zrobione %}checked{% endif %}><label class="form-check-label" for="z{{ p.punkt_id }}">zrobione</label></div>
+            <div class="col-auto form-check form-switch ms-2"><input class="form-check-input" type="checkbox" name="nie_dotyczy" id="n{{ p.punkt_id }}" {% if p.odhaczenie.nie_dotyczy %}checked{% endif %}><label class="form-check-label" for="n{{ p.punkt_id }}">nie dotyczy</label></div>
+            <div class="col-md-4"><input class="form-control form-control-sm" name="uwagi" placeholder="uwagi" value="{{ p.odhaczenie.uwagi|default:'' }}"></div>
+            <div class="col-md-3"><input class="form-control form-control-sm" type="file" name="plik" accept="application/pdf,image/*"></div>
+            <div class="col-auto"><button class="btn btn-sm btn-firmowy">Zapisz</button></div>
+          </form>
+        </details>
+        {% elif pelna and not p.ok and p.link %}<br><a class="small" href="{{ p.link }}">przejdź ›</a>{% endif %}
+      </div>
+    </div>
+  </li>
+{% endfor %}
+</ul>

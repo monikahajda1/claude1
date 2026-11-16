@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block tytul %}Wejście na budowę: {{ budowa.nazwa }}{% endblock %}
+{% block tresc %}
+<a href="{{ budowa.get_absolute_url }}" class="small">‹ {{ budowa.numer }} {{ budowa.nazwa }}</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 mb-0">Wejście na budowę</h1>
+  <span class="badge fs-6 text-bg-{% if suma.komplet %}success{% else %}warning{% endif %}">{{ suma.zrobione }} / {{ suma.wszystkie }} gotowe</span>
+</div>
+<p class="text-muted small">Start: {{ budowa.data_rozpoczecia|date:"d.m.Y"|default:"?" }} · Klient: {{ budowa.klient }} · Kierownik: {{ budowa.kierownik|default:"—" }}</p>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card mb-3"><div class="card-body">
+      <h2 class="h5">Checklista</h2>
+      {% include "wejscie/_checklista.html" with pelna=True %}
+      <p class="small text-muted mt-2 mb-0">✔/✘ bez dopisku „ręczny” program sprawdza sam na podstawie danych z innych modułów.</p>
+    </div></div>
+  </div>
+
+  <div class="col-lg-6">
+    {% if widzi_ibwr %}
+    <div class="card mb-3"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h2 class="h5 mb-0">IBWR</h2>
+        {% if ibwr %}<span class="badge text-bg-{{ ibwr.kolor }}">{{ ibwr.get_status_display }}</span>{% else %}<span class="badge text-bg-secondary">nie utworzono</span>{% endif %}
+      </div>
+      <p class="small text-muted my-2">Instrukcja bierze ekipę, sprzęt (z datami badań i przeglądów), zakres prac i materiały chemiczne z tej budowy.</p>
+      <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-sm btn-firmowy" href="{% url 'wejscie:ibwr' budowa.pk %}">{% if ibwr %}Otwórz IBWR{% else %}Przygotuj IBWR{% endif %}</a>
+        {% if ibwr %}<a class="btn btn-sm btn-outline-primary" href="{% url 'wejscie:ibwr_dokument' budowa.pk %}">⬇ Word</a>{% endif %}
+      </div>
+    </div></div>
+    {% endif %}
+
+    {% if widzi_kzm %}
+    <div class="card mb-3"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <h2 class="h5 mb-0">Materiały i KZM</h2>
+        {% if edytuje_kzm and nowe_z_zakresu %}<form method="post" action="{% url 'wejscie:materialy' budowa.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary" name="akcja" value="uzupelnij">+ Uzupełnij z zakresu prac ({{ nowe_z_zakresu }})</button></form>{% endif %}
+      </div>
+      {% for w in wiersze %}
+      <div class="border-bottom py-2 {% if w.mb.wykluczony %}opacity-50{% endif %}">
+        <div class="d-flex justify-content-between flex-wrap gap-2">
+          <span><a href="{{ w.m.get_absolute_url }}" class="fw-semibold">{{ w.m.nazwa }}</a> <small class="text-muted">{{ w.m.producent }}</small>
+            {% if w.mb.wykluczony %}<span class="badge text-bg-secondary">nieużywany</span>{% endif %}</span>
+          <span>{% if w.kzm %}<a href="{{ w.kzm.get_absolute_url }}" class="badge text-bg-{{ w.kzm.kolor }} text-decoration-none">{{ w.kzm.numer }}: {{ w.kzm.get_status_display }}</a>{% elif not w.mb.wykluczony %}<span class="badge text-bg-light border">brak KZM</span>{% endif %}</span>
+        </div>
+        {% if w.braki and not w.mb.wykluczony %}<small class="text-danger">brak: {{ w.braki|join:", " }}</small>{% endif %}
+        {% if edytuje_kzm %}<div class="d-flex gap-2 mt-1 small">
+          {% if not w.mb.wykluczony %}
+            {% if not w.kzm or w.kzm.status == "odrzucona" %}<form method="post" action="{% url 'wejscie:kzm_utworz' budowa.pk %}">{% csrf_token %}<button class="btn btn-sm btn-firmowy py-0" name="mb" value="{{ w.mb.pk }}">+ KZM</button></form>{% endif %}
+            <form method="post" action="{% url 'wejscie:materialy' budowa.pk %}">{% csrf_token %}<input type="hidden" name="mb" value="{{ w.mb.pk }}"><button class="btn btn-sm btn-link p-0" name="akcja" value="wyklucz">nie używamy na tej budowie</button></form>
+          {% else %}
+            <form method="post" action="{% url 'wejscie:materialy' budowa.pk %}">{% csrf_token %}<input type="hidden" name="mb" value="{{ w.mb.pk }}"><button class="btn btn-sm btn-link p-0" name="akcja" value="przywroc">przywróć</button></form>
+          {% endif %}
+        </div>{% endif %}
+      </div>
+      {% empty %}<p class="text-muted small">Brak materiałów. {% if nowe_z_zakresu %}Kliknij „Uzupełnij z zakresu prac”.{% else %}Dodaj je ręcznie albo przypisz materiały do systemów w module Materiały.{% endif %}</p>
+      {% endfor %}
+      {% if edytuje_kzm and do_dodania %}
+      <form method="post" action="{% url 'wejscie:materialy' budowa.pk %}" class="d-flex gap-2 mt-3">{% csrf_token %}
+        <select class="form-select form-select-sm" name="material">{% for m in do_dodania %}<option value="{{ m.pk }}">{{ m.nazwa }} ({{ m.producent }})</option>{% endfor %}</select>
+        <button class="btn btn-sm btn-outline-primary text-nowrap" name="akcja" value="dodaj">+ Dodaj materiał</button>
+      </form>
+      {% endif %}
+    </div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

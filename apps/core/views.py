@@ -17,9 +17,9 @@ from apps.konta import uprawnienia
 from .mixins import ModulMixin
 
 # Katalog w przesłanych plikach -> moduł, którego uprawnienia są potrzebne.
-# Skany umów NIE są tu wymienione celowo – wydaje je widok umowy, który sprawdza też,
+# Skany umów i dokumenty budów (katalogi „umowy”, „wejscie”) NIE są tu wymienione celowo – wydaje je widok umowy, który sprawdza też,
 # czy użytkownik ma dostęp do konkretnej budowy (kierownik – tylko swoich).
-MODUL_KATALOGU = {"bhp": "bhp", "szablony": "ustawienia"}
+MODUL_KATALOGU = {"bhp": "bhp", "szablony": "ustawienia", "materialy": "materialy", "firma": "firma"}
 
 
 @login_required

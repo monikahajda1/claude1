@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block tytul %}{% if object %}{{ object.nazwa }}{% else %}Nowy materiał{% endif %}{% endblock %}
+{% block tresc %}
+<a href="{% url 'materialy:lista' %}" class="small">‹ Materiały</a>
+<h1 class="h3">{% if object %}{{ object.nazwa }}{% else %}Nowy materiał{% endif %}</h1>
+<div class="card"><div class="card-body">
+<form method="post">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="row g-3">
+    {% for pole in form.visible_fields %}{% if pole.name != "systemy" %}{% include "_pole.html" %}{% endif %}{% endfor %}
+    <div class="col-12"><label class="form-label">{{ form.systemy.label|capfirst }}</label>
+      <div class="form-text mb-1">{{ form.systemy.help_text }}</div>
+      <div class="checkbox-lista border rounded p-2 bg-white">{{ form.systemy }}</div></div>
+  </div>
+  <div class="mt-4 d-flex gap-2">
+    <button class="btn btn-firmowy">Zapisz</button>
+    <a class="btn btn-outline-secondary" href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'materialy:lista' %}{% endif %}">Anuluj</a>
+  </div>
+</form>
+</div></div>
+{% endblock %}

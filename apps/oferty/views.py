@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Prefetch, Q
+from django.utils.http import content_disposition_header
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -341,7 +342,7 @@ class DokumentView(ModulMixin, View):
             return redirect(oferta)
         nazwa = f"Oferta_{oferta.pelny_numer.replace('/', '-')}.docx"
         odp = HttpResponse(tresc, content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-        odp["Content-Disposition"] = f'attachment; filename="{nazwa}"'
+        odp["Content-Disposition"] = content_disposition_header(True, f"{nazwa}")
         return odp
 
 

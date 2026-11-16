@@ -16,6 +16,8 @@ urlpatterns = [
     path("oferty/", include("apps.oferty.urls")),
     path("szablony/", include("apps.szablony.urls")),
     path("umowy/", include("apps.umowy.urls")),
+    path("materialy/", include("apps.materialy.urls")),
+    path("wejscie/", include("apps.wejscie.urls")),
     path("system/", include("apps.core.urls")),
     path("admin/", admin.site.urls),
     # PWA

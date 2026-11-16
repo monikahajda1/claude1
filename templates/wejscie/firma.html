@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block tytul %}Dokumenty firmy{% endblock %}
+{% block tresc %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 mb-0">Dokumenty firmy</h1>
+  {% if edytuje.firma %}<a class="btn btn-firmowy" href="{% url 'wejscie:firma_nowy' %}">+ Nowy dokument</a>{% endif %}
+</div>
+<p class="text-muted small">Polisa OC, KRS, zaświadczenia… Dokumenty oznaczone „wymagany przy wejściu na budowę” są sprawdzane na checkliście każdej budowy. O wygasających przypomni „Co dziś?”.</p>
+<table class="table table-hover bg-white responsywna">
+  <thead><tr><th>Dokument</th><th>Rodzaj</th><th>Ważny do</th><th>Plik</th></tr></thead>
+  <tbody>
+  {% for d in object_list %}
+  <tr>
+    <td>{% if edytuje.firma %}<a class="fw-semibold" href="{% url 'wejscie:firma_edytuj' d.pk %}">{{ d.nazwa }}</a>{% else %}<strong>{{ d.nazwa }}</strong>{% endif %}{% if d.numer %}<br><small class="text-muted">nr {{ d.numer }}</small>{% endif %}{% if d.wymagany_na_budowie %} <span class="badge text-bg-light border">na checkliście</span>{% endif %}</td>
+    <td data-etykieta="Rodzaj">{{ d.get_rodzaj_display }}</td>
+    <td data-etykieta="Ważny do">{{ d.data_waznosci|date:"d.m.Y"|default:"bezterminowo" }} {% if d.data_waznosci %}<span class="badge text-bg-{{ d.status.kolor }}">{{ d.status.opis }}</span>{% endif %}</td>
+    <td data-etykieta="Plik">{% if d.plik %}<a href="{{ d.plik.url }}" target="_blank">otwórz</a>{% else %}—{% endif %}</td>
+  </tr>
+  {% empty %}<tr><td colspan="4" class="text-muted">Brak dokumentów.</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -31,13 +31,18 @@
         <li class="nav-item"><a class="nav-link {% if u.app_name == 'bhp' and 'pracowni' in u.url_name %}active{% endif %}" href="{% url 'bhp:pracownicy' %}">Pracownicy</a></li>
         <li class="nav-item"><a class="nav-link {% if u.app_name == 'bhp' and 'sprzet' in u.url_name %}active{% endif %}" href="{% url 'bhp:sprzety' %}">Sprzęt</a></li>
         {% endif %}
-        {% if widzi.cennik or widzi.statystyki or widzi.dziennik or jest_adminem %}
+        {% if widzi.cennik or widzi.statystyki or widzi.dziennik or widzi.materialy or jest_adminem %}
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle {% if u.url_name == 'statystyki' or 'cennik' in u.url_name or u.app_name == 'szablony' or u.url_name == 'dziennik' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Więcej</a>
+          <a class="nav-link dropdown-toggle {% if u.url_name == 'statystyki' or 'cennik' in u.url_name or u.app_name == 'szablony' or u.app_name == 'materialy' or 'firma' in u.url_name or u.url_name == 'dziennik' %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Więcej</a>
           <ul class="dropdown-menu">
             {% if widzi.statystyki %}<li><a class="dropdown-item" href="{% url 'oferty:statystyki' %}">Statystyki ofert</a></li>{% endif %}
             {% if widzi.cennik %}<li><a class="dropdown-item" href="{% url 'oferty:cennik' %}">Cennik</a></li>{% endif %}
-            {% if widzi.oferty %}<li><a class="dropdown-item" href="{% url 'szablony:pola' 'oferta' %}">Szablon oferty (Word)</a></li>{% endif %}
+            {% if widzi.materialy %}<li><a class="dropdown-item" href="{% url 'materialy:lista' %}">Materiały</a></li>{% endif %}
+            {% if widzi.firma %}<li><a class="dropdown-item" href="{% url 'wejscie:firma' %}">Dokumenty firmy</a></li>{% endif %}
+            {% if widzi.oferty or widzi.kzm or widzi.ibwr %}<li><hr class="dropdown-divider"></li><li><h6 class="dropdown-header">Szablony Word</h6></li>{% endif %}
+            {% if widzi.oferty %}<li><a class="dropdown-item" href="{% url 'szablony:pola' 'oferta' %}">Szablon oferty</a></li>{% endif %}
+            {% if widzi.kzm %}<li><a class="dropdown-item" href="{% url 'szablony:pola' 'kzm' %}">Szablon KZM</a></li>{% endif %}
+            {% if widzi.ibwr %}<li><a class="dropdown-item" href="{% url 'szablony:pola' 'ibwr' %}">Szablon IBWR</a></li>{% endif %}
             {% if widzi.dziennik %}<li><hr class="dropdown-divider"></li><li><a class="dropdown-item" href="{% url 'core:dziennik' %}">Dziennik zmian</a></li>{% endif %}
             {% if jest_adminem and user.is_staff %}<li><a class="dropdown-item" href="{% url 'admin:index' %}">Administracja</a></li>{% endif %}
           </ul>

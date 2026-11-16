@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block tytul %}{{ object.nazwa }}{% endblock %}
+{% block tresc %}
+<a href="{% url 'materialy:lista' %}" class="small">‹ Materiały</a>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div><h1 class="h3 mb-1">{{ object.nazwa }}</h1><span class="text-muted">{{ object.producent }} · {{ object.get_rodzaj_display }}{% if object.chemiczny %} · materiał chemiczny{% endif %}</span></div>
+  {% if edytuje.materialy %}<a class="btn btn-outline-secondary" href="{% url 'materialy:edytuj' object.pk %}">Edytuj dane</a>{% endif %}
+</div>
+{% if object.zastosowanie %}<p>{{ object.zastosowanie }}</p>{% endif %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3"><div class="card-body">
+      <h2 class="h6 text-muted">Aktualne dokumenty</h2>
+      <ul class="list-group list-group-flush">
+      {% for nazwa, d in aktualne %}
+        <li class="list-group-item px-0 d-flex justify-content-between flex-wrap gap-2">
+          <span><strong>{{ nazwa }}</strong>{% if d and d.opis %} <small class="text-muted">({{ d.opis }})</small>{% endif %}</span>
+          {% if d %}<span><a href="{{ d.plik.url }}" target="_blank">otwórz</a>{% if d.data_waznosci %} · <span class="badge text-bg-{{ d.status.kolor }}">{{ d.status.opis }}</span>{% endif %}</span>
+          {% else %}<span class="badge text-bg-warning">brak</span>{% endif %}
+        </li>
+      {% endfor %}
+      </ul>
+    </div></div>
+    {% if edytuje.materialy %}
+    <div class="card mb-3"><div class="card-body">
+      <h2 class="h6 text-muted">Wgraj dokument</h2>
+      <form method="post" action="{% url 'materialy:dokument_dodaj' object.pk %}" enctype="multipart/form-data">{% csrf_token %}
+        {% include "_pola.html" %}
+        <button class="btn btn-firmowy mt-3">Wgraj</button>
+        <p class="form-text">Nowa wersja dokumentu zastępuje poprzednią w KZM; stara zostaje w archiwum poniżej.</p>
+      </form>
+    </div></div>
+    {% endif %}
+    <div class="card mb-3"><div class="card-body">
+      <h2 class="h6 text-muted">Wszystkie wersje</h2>
+      <table class="table table-sm mb-0">
+      {% for d in dokumenty %}<tr class="{% if d.pk not in aktualne_id %}text-muted{% endif %}"><td>{{ d.get_typ_display }}{% if d.opis %} ({{ d.opis }}){% endif %}{% if d.pk not in aktualne_id %} – archiwalny{% endif %}</td><td>{{ d.dodano|date:"d.m.Y" }}</td><td><a href="{{ d.plik.url }}" target="_blank">otwórz</a></td>
+        <td class="text-end">{% if edytuje.materialy %}<form method="post" action="{% url 'materialy:dokument_usun' object.pk d.pk %}" onsubmit="return confirm('Usunąć ten dokument?')">{% csrf_token %}<button class="btn btn-sm btn-link text-danger p-0">usuń</button></form>{% endif %}</td></tr>
+      {% empty %}<tr><td class="text-muted">Brak dokumentów.</td></tr>{% endfor %}
+      </table>
+    </div></div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card mb-3"><div class="card-body">
+      <h2 class="h6 text-muted">Stosowany w pozycjach cennika</h2>
+      {% for s in object.systemy.all %}<div>{{ s.nazwa }}</div>{% empty %}<p class="text-muted small mb-0">Nie przypisano – budowy nie dodadzą go automatycznie.</p>{% endfor %}
+    </div></div>
+    <div class="card mb-3"><div class="card-body">
+      <h2 class="h6 text-muted">Budowy</h2>
+      {% for b in budowy %}<div><a href="{% url 'wejscie:budowa' b.pk %}">{{ b.numer }} {{ b.nazwa }}</a></div>{% empty %}<p class="text-muted small mb-0">Brak.</p>{% endfor %}
+    </div></div>
+  </div>
+</div>
+{% include "_historia.html" %}
+{% endblock %}

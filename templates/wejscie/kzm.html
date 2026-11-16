@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block tytul %}{{ kzm.numer }}{% endblock %}
+{% block tresc %}
+<a href="{% url 'wejscie:budowa' kzm.budowa_id %}" class="small">‹ Wejście na budowę: {{ kzm.budowa.nazwa }}</a>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div><h1 class="h3 mb-1">{{ kzm.numer }}</h1><span class="text-muted">{{ kzm.material }}</span> <span class="badge text-bg-{{ kzm.kolor }}">{{ kzm.get_status_display }}</span></div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-primary" href="{% url 'wejscie:kzm_dokument' kzm.pk %}">⬇ Karta KZM (Word)</a>
+    <a class="btn btn-outline-primary" href="{% url 'wejscie:kzm_zip' kzm.pk %}">⬇ Dokumenty materiału (ZIP)</a>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card"><div class="card-body">
+      {% if edytuje %}
+      <form method="post" enctype="multipart/form-data">{% csrf_token %}
+        {% include "_pola.html" %}
+        {% if kzm.skan %}<p class="small mt-2">Obecny skan: <a href="{% url 'wejscie:plik' 'kzm' kzm.pk %}" target="_blank">otwórz</a></p>{% endif %}
+        <p class="form-text">Daty złożenia i decyzji uzupełnią się dzisiejszą datą, jeśli ich nie wpiszesz.</p>
+        <button class="btn btn-firmowy mt-2">Zapisz</button>
+      </form>
+      {% else %}
+      <dl class="row mb-0"><dt class="col-5">Zastosowanie</dt><dd class="col-7">{{ kzm.zastosowanie|default:"—" }}</dd>
+        <dt class="col-5">Złożona</dt><dd class="col-7">{{ kzm.data_zlozenia|date:"d.m.Y"|default:"—" }}</dd>
+        <dt class="col-5">Decyzja</dt><dd class="col-7">{{ kzm.data_decyzji|date:"d.m.Y"|default:"—" }}</dd>
+        <dt class="col-5">Uwagi</dt><dd class="col-7">{{ kzm.uwagi_zatwierdzajacego|default:"—" }}</dd>
+        <dt class="col-5">Skan</dt><dd class="col-7">{% if kzm.skan %}<a href="{% url 'wejscie:plik' 'kzm' kzm.pk %}" target="_blank">otwórz</a>{% else %}—{% endif %}</dd></dl>
+      {% endif %}
+    </div></div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card"><div class="card-body">
+      <h2 class="h6 text-muted">Załączniki (trafią do paczki ZIP)</h2>
+      {% for d in zalaczniki %}<div>{{ forloop.counter }}. <a href="{{ d.plik.url }}" target="_blank">{{ d.get_typ_display }}</a>{% if d.data_waznosci %} <span class="badge text-bg-{{ d.status.kolor }}">{{ d.status.opis }}</span>{% endif %}</div>{% empty %}<p class="text-muted small">Brak dokumentów.</p>{% endfor %}
+      {% if braki %}<p class="text-danger small mt-2 mb-0">Brakuje: {{ braki|join:", " }} – <a href="{{ kzm.material.get_absolute_url }}">wgraj w module Materiały</a>.</p>{% endif %}
+    </div></div>
+  </div>
+</div>
+{% include "_historia.html" %}
+{% endblock %}

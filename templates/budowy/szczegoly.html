@@ -122,8 +122,19 @@
   {% else %}<p class="text-muted mb-0">Brak pozycji zakresu. Przy budowie utworzonej z oferty uzupełniają się same; tu możesz je wpisać ręcznie.</p>{% endif %}
 </div></div>
 {% endif %}
+{% if punkty %}
+<div class="card mt-3"><div class="card-body">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <h2 class="h5 mb-0">Wejście na budowę <span class="badge text-bg-{% if suma_checklisty.komplet %}success{% else %}warning{% endif %}">{{ suma_checklisty.zrobione }} / {{ suma_checklisty.wszystkie }}</span></h2>
+    <a class="btn btn-sm btn-firmowy" href="{% url 'wejscie:budowa' b.pk %}">Checklista, KZM, IBWR ›</a>
+  </div>
+  {% if suma_checklisty.komplet %}<p class="text-success mb-0">✔ Wszystko gotowe do wejścia na budowę.</p>
+  {% else %}<ul class="small mb-0">{% for p in punkty %}{% if not p.ok %}<li>{{ p.nazwa }}{% if p.szczegoly %} <span class="text-muted">– {{ p.szczegoly|truncatechars:120 }}</span>{% endif %}</li>{% endif %}{% endfor %}</ul>{% endif %}
+</div></div>
+{% endif %}
+
 <div class="card mt-3"><div class="card-body text-muted small">
-  W kolejnych etapach pojawią się tu: dokumenty wejścia na budowę (IBWR, KZM, checklista), rozliczenia miesięczne i dokumentacja powykonawcza.
+  W kolejnych etapach pojawią się tu: rozliczenia miesięczne i dokumentacja powykonawcza.
 </div></div>
 {% include "_historia.html" %}
 {% endwith %}

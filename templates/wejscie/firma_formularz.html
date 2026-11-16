@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block tytul %}Dokument firmy{% endblock %}
+{% block tresc %}
+<a href="{% url 'wejscie:firma' %}" class="small">‹ Dokumenty firmy</a>
+<h1 class="h3">{% if object %}{{ object.nazwa }}{% else %}Nowy dokument firmy{% endif %}</h1>
+<div class="card"><div class="card-body">
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  {% include "_pola.html" %}
+  {% if object.plik %}<p class="small mt-2">Obecny plik: <a href="{{ object.plik.url }}" target="_blank">otwórz</a></p>{% endif %}
+  <div class="mt-4 d-flex gap-2"><button class="btn btn-firmowy">Zapisz</button><a class="btn btn-outline-secondary" href="{% url 'wejscie:firma' %}">Anuluj</a></div>
+  <p class="form-text mt-3">Nowa polisa na kolejny rok? Dodaj nowy dokument (nie nadpisuj starego) – program weźmie najnowszy.</p>
+</form>
+</div></div>
+{% endblock %}

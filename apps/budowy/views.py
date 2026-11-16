@@ -92,6 +92,11 @@ class BudowaDetailView(ModulMixin, DetailView):
                 ctx["roznica_zakresu"] = ctx["umowa"].wartosc_aktualna - ctx["suma_zakresu"]
             if u.moze_widziec(user, "oferty"):
                 ctx["oferty"] = b.oferty.all()
+        if u.moze_widziec(user, "checklista"):
+            from apps.wejscie.checklista import checklista, podsumowanie
+
+            ctx["punkty"] = checklista(b, user=user)
+            ctx["suma_checklisty"] = podsumowanie(ctx["punkty"])
         ctx["historia"] = b.history.select_related("history_user")[:10]
         return ctx
 

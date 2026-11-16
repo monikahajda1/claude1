@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block tytul %}Materiały{% endblock %}
+{% block tresc %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 mb-0">Materiały</h1>
+  {% if edytuje.materialy %}<a class="btn btn-firmowy" href="{% url 'materialy:nowy' %}">+ Nowy materiał</a>{% endif %}
+</div>
+<p class="text-muted small">Dokumenty materiału wgrywasz raz – program dołącza je do KZM, IBWR i (w etapie 6) do dokumentacji powykonawczej każdej budowy.</p>
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-5"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Szukaj: nazwa, producent…"></div>
+  <div class="col-8 col-md-4"><select class="form-select" name="rodzaj"><option value="">— każdy rodzaj —</option>{% for k, n in rodzaje %}<option value="{{ k }}" {% if rodzaj == k %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
+  <div class="col-4 col-md-3"><button class="btn btn-outline-secondary w-100">Filtruj</button></div>
+</form>
+<table class="table table-hover bg-white responsywna tabela-karty">
+  <thead><tr><th>Materiał</th><th>Rodzaj</th><th>Dokumenty</th><th>Stosowany w</th></tr></thead>
+  <tbody>
+  {% for m in object_list %}
+  <tr>
+    <td><a class="fw-semibold" href="{{ m.get_absolute_url }}">{{ m.nazwa }}</a><br><small class="text-muted">{{ m.producent }}</small>{% if not m.aktywny %} <span class="badge text-bg-secondary">nieaktywny</span>{% endif %}</td>
+    <td data-etykieta="Rodzaj">{{ m.get_rodzaj_display }}</td>
+    <td data-etykieta="Dokumenty">{% with braki=m.brakujace_typy %}{% if braki %}{% for b in braki %}<span class="badge text-bg-warning me-1">brak: {{ b }}</span>{% endfor %}{% else %}<span class="badge text-bg-success">✓ komplet</span>{% endif %}{% endwith %}</td>
+    <td data-etykieta="Systemy" class="small">{% for s in m.systemy.all %}{{ s.nazwa }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
+  </tr>
+  {% empty %}<tr><td colspan="4" class="text-muted">Brak materiałów.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
