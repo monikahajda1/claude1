@@ -86,8 +86,8 @@ docs/              instrukcje dla użytkowniczki
 ## Plan etapów
 1. ✅ ZAAKCEPTOWANY (warunkowo – skrypty .bat nie były jeszcze testowane na Windowsie; poprawki zgłoszone później naprawiać w dowolnym momencie) Instalacja, logowanie i role, lista budów z etapami, BHP (pracownicy, sprzęt, daty ważności), „Co dziś?”.
 2. ✅ ZAAKCEPTOWANY Oferty: kalkulator (m² × system, gruntowanie, cokoliki…), oferta z szablonu Word, statusy, follow-up (7 dni), statystyki skuteczności.
-3. ✅ (do akceptacji) Umowa: wygrana oferta → budowa (przycisk w ofercie), dane umowy, zakres prac, aneksy, kaucje i gwarancje na „Co dziś?”.
-4. Wejście na budowę: IBWR i KZM z szablonów, checklista „czego brakuje” per budowa.
+3. ✅ ZAAKCEPTOWANY Umowa: wygrana oferta → budowa (przycisk w ofercie), dane umowy, zakres prac, aneksy, kaucje i gwarancje na „Co dziś?”.
+4. ⏳ W TRAKCIE (pytania i plan) – Wejście na budowę: IBWR i KZM z szablonów, checklista „czego brakuje” per budowa.
 5. Rozliczenia miesięczne: m² w miesiącu, % zaawansowania, kwota do faktury, protokół odbioru częściowego.
 6. Dokumentacja powykonawcza: jeden PDF ze spisem treści (karty techniczne, DoP, protokoły pomiarów, zdjęcia).
 Pomysły na później: blokada po wielu nieudanych logowaniach (django-axes), automatyczne kopie (Harmonogram zadań Windows).
