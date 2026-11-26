@@ -88,6 +88,27 @@ main{padding:12px 16px calc(100px + var(--safe-b));max-width:680px;margin:0 auto
 .card.exrow{display:flex;gap:12px;align-items:center;padding:10px}
 .exrow .fig.mini{width:92px;flex:none}
 
+/* Plan */
+.prog{height:10px;border-radius:9px;background:rgba(255,255,255,.3);overflow:hidden;margin-top:8px}
+.prog i{display:block;height:100%;background:#fff;border-radius:9px}
+.weeks{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin:12px 0 4px}
+.chip.wk{padding:0;min-height:46px;font-weight:600}
+.chip.wk.cur:not(.on){border:2px solid var(--caramel)}
+.card.dayrow{display:flex;gap:12px;align-items:center;padding:12px 14px;position:relative}
+.dayrow.today{border:2px solid var(--caramel)}
+.dayrow.odpoczynek{background:#f8f3ec;box-shadow:none}
+.dico{width:46px;height:46px;flex:none;border-radius:50%;background:var(--beige);display:flex;align-items:center;justify-content:center;font-size:22px}
+.dayrow.done .dico{background:var(--ok);color:#fff;font-weight:700}
+.dtxt{flex:1;min-width:0}
+.miss{position:absolute;top:10px;right:12px;font-size:12px;color:#a4553a}
+.btn.light{background:#fffaf3;color:var(--brown-d)}
+.btn.ghost{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.45)}
+.input{width:100%;min-height:52px;font:inherit;font-size:18px;padding:8px 12px;border:1px solid var(--beige2);border-radius:14px;background:#fff;color:var(--text);margin:8px 0}
+.segs{margin:0;padding-left:22px}
+.segs li{padding:6px 0;border-bottom:1px dashed var(--line)}
+.segs li:last-child{border:0}
+.segs li.work b{color:var(--brown)}
+
 /* Odtwarzacz */
 body.playing{overflow:hidden}
 #player{position:fixed;inset:0;z-index:50;background:var(--bg);overflow-y:auto;transition:background .3s}
@@ -617,6 +638,81 @@ const workoutSession = (w, level) => ({ title: w.name, kind: w.kind, steps: buil
 function settings() { return { sound: true, voice: true, prep: 10, ...store.get('settings', {}) }; }
 
 /* =========================================================
+   PLAN 8 TYGODNI
+   Pn/Śr/Pt – bieżnia, Wt/Sob – siłowy, Cz/Nd – odpoczynek
+   ========================================================= */
+const PLAN_WEEKS = 8;
+// poziom ćwiczeń, czas pracy/przerwy i liczba rund dla każdego tygodnia
+const STRENGTH_PROG = [
+  { level:0, work:30, rest:30, rounds:2 }, { level:0, work:35, rest:25, rounds:2 }, { level:0, work:35, rest:25, rounds:3 },
+  { level:1, work:30, rest:30, rounds:3 }, { level:1, work:40, rest:20, rounds:3 }, { level:1, work:45, rest:15, rounds:3 },
+  { level:2, work:35, rest:25, rounds:3 }, { level:2, work:40, rest:20, rounds:3 }
+];
+const STRENGTH_SETS = {
+  A: { name:'Dół ciała + brzuch', early:['przysiad','mostek','wykrok-tyl','kopniecia','martwy-robak','deska'], late:['przysiad-sumo','mostek-jednonoz','wykrok-bok','wspiecia','rowerek','unoszenie-nog'] },
+  B: { name:'Góra ciała + całe ciało', early:['pajacyki','pompki','ptak-pies','wspinaczka','superman','dipy'], late:['burpees','pompki','dipy','wysokie-kolana','superman','deska'] }
+};
+// interwały na bieżni: [trucht min, marsz min, powtórzenia] albo bieg ciągły
+const RUN_PROG = [ [1, 2, 6], [1.5, 2, 6], [2, 2, 5], [3, 2, 4], [4, 1.5, 4], [6, 1.5, 3], [10, 2, 2], [20, 0, 1] ];
+const PHASES = [ { from:1, to:3, name:'Poznajemy ruchy', desc:'Poziom łatwy, nauka techniki, krótsza praca.' },
+                 { from:4, to:6, name:'Budujemy siłę', desc:'Poziom średni i coraz krótsze przerwy.' },
+                 { from:7, to:8, name:'Wyzwanie', desc:'Poziom trudny – sprawdzasz swoje postępy.' } ];
+
+const mondayOf = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); return addDays(x, -((x.getDay() + 6) % 7)); };
+function planStart() {
+  let s = store.get('planStart', null);
+  if (!s) { s = ymd(mondayOf(new Date())); store.set('planStart', s); }
+  return parseYmd(s);
+}
+function planWeek(date) { return Math.floor(Math.round((mondayOf(date) - planStart()) / 864e5) / 7) + 1; }
+
+function treadmillSegments(week, dow) {
+  const w = Math.min(Math.max(week, 1), PLAN_WEEKS);
+  const segs = [{ label:'Marsz – rozgrzewka', min:5, type:'rest', sub:'ok. 5–5,5 km/h', icon:'🚶‍♀️' }];
+  if (dow === 3) {          // środa – marsz pod górę
+    const incline = 3 + Math.floor((w - 1) / 2), main = 20 + Math.floor(w / 2);
+    segs.push({ label:'Marsz pod górę', min:main, type:'work', sub:`nachylenie ${incline}%, ok. 5–5,5 km/h`, icon:'⛰️' });
+  } else {
+    const [run, walk, reps] = RUN_PROG[w - 1];
+    for (let i = 0; i < reps; i++) {
+      segs.push({ label:'Trucht', min:run, type:'work', sub:'ok. 7–8 km/h, możesz swobodnie mówić', icon:'🏃‍♀️' });
+      if (walk && i < reps - 1) segs.push({ label:'Marsz', min:walk, type:'rest', sub:'ok. 5,5 km/h, uspokój oddech', icon:'🚶‍♀️' });
+    }
+  }
+  segs.push({ label:'Marsz – schłodzenie', min:5, type:'rest', sub:'zwalniaj do ok. 4,5 km/h', icon:'🚶‍♀️' });
+  return segs;
+}
+const fmtMin = m => (m % 1 ? String(m).replace('.', ',') : m) + ' min';
+
+function planDay(date) {
+  const week = planWeek(date), dow = date.getDay(), key = ymd(date);
+  const inPlan = week >= 1 && week <= PLAN_WEEKS;
+  const wk = Math.min(Math.max(week, 1), PLAN_WEEKS);
+  const base = { date, key, week, inPlan, dow };
+  if (dow === 2 || dow === 6) {
+    const set = STRENGTH_SETS[dow === 2 ? 'A' : 'B'], pr = STRENGTH_PROG[wk - 1];
+    const w = { id:'plan-' + key, name:set.name, kind:'silowy', work:pr.work, rest:pr.rest, rounds:pr.rounds, ex: wk <= 4 ? set.early : set.late };
+    const steps = buildSteps(w, pr.level);
+    return { ...base, kind:'silowy', icon:'💪', title:'Trening siłowy: ' + set.name, minutes:stepsMinutes(steps), workout:w, level:pr.level,
+      summary:`${LEVEL_NAMES[pr.level]} · ${pr.work}s pracy / ${pr.rest}s przerwy · ${pr.rounds} ${pr.rounds === 1 ? 'runda' : 'rundy'}`,
+      session: () => ({ title:set.name, kind:'silowy', steps:buildSteps(w, pr.level), level:pr.level, planKey:key }) };
+  }
+  if (dow === 1 || dow === 3 || dow === 5) {
+    const segs = treadmillSegments(wk, dow), minutes = segs.reduce((a, s) => a + s.min, 0);
+    const title = dow === 3 ? 'Bieżnia: marsz pod górę' : 'Bieżnia: marsz + trucht';
+    const [run, walk, reps] = RUN_PROG[wk - 1];
+    const summary = dow === 3 ? segs[1].sub : (walk ? `${reps} × (${fmtMin(run)} truchtu + ${fmtMin(walk)} marszu)` : `${fmtMin(run)} spokojnego biegu bez przerwy`);
+    return { ...base, kind:'bieznia', icon:'🏃‍♀️', title, minutes, segs, summary,
+      session: () => ({ title, kind:'bieznia', planKey:key,
+        steps:[{ type:'prep', sec:settings().prep, label:'Wejdź na bieżnię', sub:'Ustaw prędkość marszu', icon:'🚶‍♀️' },
+               ...segs.map(s => ({ type:s.type, sec:Math.round(s.min * 60), label:s.label, sub:s.sub, icon:s.icon }))] }) };
+  }
+  return { ...base, kind:'odpoczynek', icon:'🌿', title:'Odpoczynek', minutes:0, summary:'Regeneracja. Jeśli masz ochotę – lekkie rozciąganie lub spacer.' };
+}
+function firstUse() { let f = store.get('firstUse', null); if (!f) { f = ymd(new Date()); store.set('firstUse', f); } return f; }
+function dayDone(key, kind) { return logAll().some(e => e.planKey === key || (e.date === key && e.kind === kind)); }
+
+/* =========================================================
    DŹWIĘK, WIBRACJE, BLOKADA WYGASZANIA EKRANU
    ========================================================= */
 let audioCtx = null;
@@ -666,7 +762,8 @@ function beginStep() {
   const s = PL.session.steps[PL.i];
   PL.remain = s.sec; PL.endAt = Date.now() + s.sec * 1000; PL.lastSec = s.sec;
   renderPlayer();
-  if (s.type === 'work') { beep(1046, 0.35, 0.3); vibrate(300); say(stepTitle(s)); }
+  if (!s.exId) { beep(s.type === 'work' ? 1046 : 523, 0.4, 0.3); vibrate(400); say(s.label + (s.type === 'prep' ? '' : ', ' + Math.round(s.sec / 60) + ' minut')); }
+  else if (s.type === 'work') { beep(1046, 0.35, 0.3); vibrate(300); say(stepTitle(s)); }
   else if (s.type === 'rest') { beep(523, 0.35, 0.3); vibrate([120, 80, 120]); say('Przerwa. Następnie: ' + stepTitle(s)); }
   else say('Przygotuj się. ' + stepTitle(s));
 }
@@ -728,7 +825,8 @@ actions.plToLog = () => { closePlayer(); location.hash = '#/log'; };
 
 function renderPlayer() {
   const st = PL.session.steps, s = st[PL.i], ex = EX_BY_ID[s.exId];
-  const nextWork = st.slice(PL.i + 1).find(x => x.type === 'work');
+  const nextWork = ex ? st.slice(PL.i + 1).find(x => x.type === 'work') : st[PL.i + 1];
+  const phase = PL.paused ? 'Pauza' : (ex ? PHASE[s.type] + (s.type !== 'work' ? ' – następnie:' : '') : (s.type === 'prep' ? PHASE.prep : 'Odcinek ' + PL.i + ' z ' + (st.length - 1)));
   const workSteps = st.filter(x => x.type === 'work'), workIdx = st.slice(0, PL.i + 1).filter(x => x.type === 'work').length;
   const lvl = s.level ?? 0;
   const info = ex ? `${esc(LEVEL_NAMES[lvl])}: ${esc(ex.levels[lvl])}` : esc(s.sub || '');
@@ -736,10 +834,10 @@ function renderPlayer() {
   $('#player').innerHTML = `<div class="pl-inner">
     <div class="pl-top">
       <button class="pl-x" data-act="plClose" aria-label="Zamknij">✕</button>
-      <div class="pl-title"><b>${esc(PL.session.title)}</b><span>${s.type === 'work' ? `Ćwiczenie ${workIdx} z ${workSteps.length}` + (s.rounds > 1 ? ` · runda ${s.round}/${s.rounds}` : '') : PHASE[s.type]}</span></div>
+      <div class="pl-title"><b>${esc(PL.session.title)}</b><span>${ex && s.type === 'work' ? `Ćwiczenie ${workIdx} z ${workSteps.length}` + (s.rounds > 1 ? ` · runda ${s.round}/${s.rounds}` : '') : 'Pozostało do końca:'}</span></div>
       <span class="pl-total" id="plTotal"></span>
     </div>
-    <div class="pl-phase">${PL.paused ? 'Pauza' : PHASE[s.type]}${s.type !== 'work' ? ' – następnie:' : ''}</div>
+    <div class="pl-phase">${phase}</div>
     <div class="pl-fig">${ex ? figureSVG(ex, { animate: true, cls: 'pl' }) : `<div class="big-emoji">${s.icon || '🏃‍♀️'}</div>`}</div>
     <div class="pl-name">${esc(stepTitle(s))}</div>
     <div class="pl-info">${info}</div>
@@ -747,7 +845,7 @@ function renderPlayer() {
       <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="ring-bg"/><circle cx="60" cy="60" r="52" class="ring" id="plRing" transform="rotate(-90 60 60)"/></svg>
       <div class="pl-sec" id="plSec"></div>
     </div>
-    <div class="pl-next">${s.type === 'work' ? (nextWork ? `Następnie: <b>${esc(stepTitle(nextWork))}</b>` : 'To ostatnie ćwiczenie! 💪') : ''}</div>
+    <div class="pl-next">${s.type === 'work' || !ex ? (nextWork ? `Następnie: <b>${esc(stepTitle(nextWork))}</b>` + (ex ? '' : ` (${fmtMin(Math.round(nextWork.sec / 30) / 2)})`) : 'Ostatni odcinek! 💪') : ''}</div>
     <div class="pl-ctrl">
       <button class="pl-b" data-act="plPrev" aria-label="Wstecz">⏮</button>
       <button class="pl-b main" data-act="plPause">${PL.paused ? '▶ Wznów' : '❚❚ Pauza'}</button>
@@ -788,6 +886,47 @@ function renderLevels(id) {
   $('#lvlText').textContent = ex.levels[l];
 }
 const LEVEL_NAMES = ['Łatwy', 'Średni', 'Trudny'];
+let planSelWeek = null;
+actions.planWeek = el => { planSelWeek = +el.dataset.w; render(); };
+actions.planStartSave = () => {
+  const v = $('#startDate').value; if (!v) return;
+  store.set('planStart', ymd(mondayOf(parseYmd(v)))); planSelWeek = null; render();
+};
+actions.planStartNow = () => {
+  if (!confirm('Ustawić początek planu na ten tydzień? Wpisy w dzienniku zostaną.')) return;
+  store.set('planStart', ymd(mondayOf(new Date()))); planSelWeek = null; render();
+};
+actions.startPlan = el => { const d = planDay(parseYmd(el.dataset.key)); if (d.session) startSession(d.session()); };
+actions.markDone = el => {
+  const d = planDay(parseYmd(el.dataset.key));
+  if (dayDone(d.key, d.kind)) {
+    if (!confirm('Cofnąć oznaczenie tego dnia jako wykonanego?')) return;
+    store.set('log', logAll().filter(e => !(e.planKey === d.key || (e.date === d.key && e.kind === d.kind))));
+  } else logAdd({ date: d.key, title: d.title.replace(/^.*?: /, ''), kind: d.kind, minutes: d.minutes, planKey: d.key, manual: true });
+  render();
+};
+function dayRowHTML(d) {
+  const isToday = d.key === ymd(new Date()), done = d.kind !== 'odpoczynek' && dayDone(d.key, d.kind);
+  const past = d.date < parseYmd(ymd(new Date())) && d.key >= firstUse();
+  return `<button class="card tap dayrow ${d.kind} ${isToday ? 'today' : ''} ${done ? 'done' : ''}" data-go="#/day/${d.key}">
+    <div class="dico">${done ? '✓' : d.icon}</div>
+    <div class="dtxt"><div class="small muted">${DNI_KR[d.dow]} · ${fmtDate(d.date)}${isToday ? ' · <b>dziś</b>' : ''}</div>
+      <b>${esc(d.title)}</b>${d.minutes ? ` <span class="muted small">· ${d.minutes} min</span>` : ''}
+      <div class="small muted">${esc(d.summary)}</div></div>
+    ${d.kind !== 'odpoczynek' && past && !done ? '<span class="miss">pominięty</span>' : ''}
+  </button>`;
+}
+function dayHeroHTML(d, done, link) {
+  return `<div class="card hero dayhero">
+    <div class="big-emoji" style="font-size:44px;text-align:left">${done ? '✅' : d.icon}</div>
+    <h2 style="margin:4px 0">${esc(d.title)}</h2>
+    <p class="muted">${d.minutes ? d.minutes + ' min · ' : ''}${esc(d.summary)}</p>
+    ${!d.inPlan ? `<p class="small">Ten dzień jest poza 8-tygodniowym planem – pokazuję ${d.week < 1 ? 'tydzień 1' : 'tydzień 8'}.</p>` : ''}
+    ${d.session ? `<button class="btn light" data-act="startPlan" data-key="${d.key}">▶ ${done ? 'Zrób jeszcze raz' : 'Start z timerem'}</button>
+      <button class="btn ghost" data-act="markDone" data-key="${d.key}">${done ? '✓ Wykonane (cofnij)' : 'Oznacz jako zrobione'}</button>` : ''}
+    ${link && d.kind !== 'odpoczynek' ? `<button class="btn ghost" data-go="#/day/${d.key}">Szczegóły treningu</button>` : ''}
+  </div>`;
+}
 actions.wlevel = el => { store.set('wlevel', +el.dataset.lvl); render(); };
 actions.startWorkout = el => startSession(workoutSession(W_BY_ID[el.dataset.id], store.get('wlevel', 0)));
 actions.setting = el => { const s = settings(); s[el.dataset.key] = !s[el.dataset.key]; store.set('settings', s); render(); if (s.sound) { unlockAudio(); beep(); } };
@@ -802,14 +941,15 @@ function soundSettingsHTML() {
 }
 const views = {
   today() {
-    const d = new Date();
+    const now = new Date(), d = planDay(now), done = d.kind !== 'odpoczynek' && dayDone(d.key, d.kind);
+    const next = [1, 2, 3, 4, 5, 6].map(i => planDay(addDays(now, i))).filter(x => x.kind !== 'odpoczynek').slice(0, 3);
     return { title: 'Dziś', html: `
-      <div class="card hero">
-        <div class="muted small">${esc(DNI[d.getDay()])}, ${esc(fmtDate(d))}</div>
-        <h2 style="margin:6px 0 4px">Cześć! 👋</h2>
-        <p>Tu pojawi się Twój trening na dziś.</p>
-      </div>
-      <div class="empty">Etap 1 – szkielet aplikacji gotowy.</div>` };
+      <p class="muted" style="margin:4px 0 0">${esc(DNI[now.getDay()])}, ${esc(fmtDate(now))}${d.inPlan ? ` · tydzień ${d.week} z ${PLAN_WEEKS}` : ''}</p>
+      ${dayHeroHTML(d, done, true)}
+      ${typeof statsHTML === 'function' ? statsHTML() : ''}
+      <h2>Następne treningi</h2>
+      ${next.map(x => dayRowHTML(x)).join('')}
+      <button class="btn sec" data-go="#/plan">Cały plan 8 tygodni</button>` };
   },
   exercises() {
     const list = EXERCISES.filter(e => exCat === 'all' || e.cat === exCat);
@@ -875,15 +1015,69 @@ const views = {
         </button>`; }).join('')}
       ${soundSettingsHTML()}` };
   },
-  plan() { return { title: 'Plan 8 tygodni', html: `<div class="empty">Plan tygodniowy – etap 4.</div>` }; },
+  plan() {
+    const today = new Date(), cur = planWeek(today);
+    const sel = planSelWeek ?? Math.min(Math.max(cur, 1), PLAN_WEEKS);
+    const start = planStart(), mon = addDays(start, (sel - 1) * 7);
+    const phase = PHASES.find(p => sel >= p.from && sel <= p.to);
+    const days = [0, 1, 2, 3, 4, 5, 6].map(i => planDay(addDays(mon, i)));
+    const doneCount = days.filter(d => d.kind !== 'odpoczynek' && dayDone(d.key, d.kind)).length;
+    const curTxt = cur < 1 ? `Plan zacznie się ${fmtDate(start)}` : cur > PLAN_WEEKS ? 'Plan ukończony! 🎉 Możesz zacząć od nowa.' : `Jesteś w tygodniu ${cur} z ${PLAN_WEEKS}`;
+    return { title: 'Plan 8 tygodni', html: `
+      <div class="card hero">
+        <div class="muted small">${esc(curTxt)}</div>
+        <h2 style="margin:4px 0">Tydzień ${sel}: ${esc(phase.name)}</h2>
+        <p class="muted">${esc(phase.desc)}</p>
+        <div class="prog"><i style="width:${Math.min(100, Math.max(0, (cur - 1) / PLAN_WEEKS * 100 + (cur >= 1 && cur <= PLAN_WEEKS ? 100 / PLAN_WEEKS * ((today.getDay() + 6) % 7 + 1) / 7 : 0)))}%"></i></div>
+      </div>
+      <div class="weeks">${Array.from({ length: PLAN_WEEKS }, (_, i) => `<button class="chip wk ${i + 1 === sel ? 'on' : ''} ${i + 1 === cur ? 'cur' : ''}" data-act="planWeek" data-w="${i + 1}">${i + 1}</button>`).join('')}</div>
+      <p class="muted small" style="text-align:center">${fmtDate(mon)} – ${fmtDate(addDays(mon, 6))} · wykonane: ${doneCount} z 5</p>
+      ${days.map(d => dayRowHTML(d)).join('')}
+      <h2>Jak to działa?</h2>
+      <div class="card small">
+        <p>🏃‍♀️ <b>Pn, Śr, Pt – bieżnia.</b> Poniedziałek i piątek: marsz przeplatany truchtem, który z tygodnia na tydzień się wydłuża – aż do 20 min biegu w 8. tygodniu. Środa: marsz pod górę.</p>
+        <p>💪 <b>Wt i Sob – trening siłowy.</b> Wtorek: dół ciała i brzuch, sobota: góra i całe ciało. Co tydzień rośnie czas pracy lub liczba rund, w 4. i 7. tygodniu wchodzi wyższy poziom ćwiczeń, a od 5. tygodnia – nowe ćwiczenia.</p>
+        <p>🌿 <b>Cz i Nd – odpoczynek.</b> Mięśnie rosną w czasie regeneracji!</p>
+        <p class="muted">Jeśli tydzień był trudny – śmiało powtórz go, zmieniając datę startu.</p>
+      </div>
+      <h2>Początek planu</h2>
+      <div class="card">
+        <label class="small muted" for="startDate">Poniedziałek, od którego liczysz tydzień 1:</label>
+        <input type="date" id="startDate" class="input" value="${ymd(start)}">
+        <div class="row">
+          <button class="btn sec" data-act="planStartSave">Zapisz datę</button>
+          <button class="btn sec" data-act="planStartNow">Od tego tygodnia</button>
+        </div>
+      </div>
+      ${soundSettingsHTML()}` };
+  },
+  day(key) {
+    const d = planDay(parseYmd(key)), done = d.kind !== 'odpoczynek' && dayDone(d.key, d.kind);
+    let body = '';
+    if (d.kind === 'silowy') body = `
+      <div class="row"><button class="btn sec" data-act="startWorkout" data-id="rozgrzewka">Rozgrzewka (4 min)</button></div>
+      <h2>Ćwiczenia</h2>
+      ${d.workout.ex.map((id, i) => { const e = EX_BY_ID[id]; return `
+        <button class="card tap exrow" data-go="#/exercise/${id}">${figureSVG(e, { frame: 1, cls: 'mini' })}
+          <div><b>${i + 1}. ${esc(e.name)}</b><div class="muted small">${esc(e.levels[d.level])}</div></div></button>`; }).join('')}`;
+    else if (d.kind === 'bieznia') body = `
+      <h2>Przebieg</h2>
+      <div class="card"><ol class="segs">${d.segs.map(s => `<li class="${s.type}"><b>${s.icon} ${esc(s.label)}</b> – ${fmtMin(s.min)}<div class="muted small">${esc(s.sub)}</div></li>`).join('')}</ol></div>
+      <p class="muted small">Prędkości są orientacyjne – trucht ma być na tyle spokojny, żebyś mogła mówić pełnymi zdaniami. Jeśli brakuje Ci tchu, zwolnij.</p>
+      <button class="btn sec" data-act="startWorkout" data-id="stretch">Rozciąganie po bieżni (10 min)</button>`;
+    else body = `<button class="btn sec" data-act="startWorkout" data-id="stretch">Lekkie rozciąganie (10 min)</button>`;
+    return { title: `${DNI[d.date.getDay()][0].toUpperCase() + DNI[d.date.getDay()].slice(1)}, ${fmtDate(d.date)}`, html: `
+      ${dayHeroHTML(d, done)}
+      ${body}` };
+  },
   log() { return { title: 'Dziennik', html: `<div class="empty">Dziennik i kalendarz – etap 5.</div>` }; }
 };
 
 /* =========================================================
    ROUTER
    ========================================================= */
-const TAB_OF = { today:'today', exercises:'exercises', exercise:'exercises', workouts:'workouts', workout:'workouts', plan:'plan', log:'log' };
-const PARENT = { exercise:'#/exercises', workout:'#/workouts' };
+const TAB_OF = { today:'today', exercises:'exercises', exercise:'exercises', workouts:'workouts', workout:'workouts', plan:'plan', day:'plan', log:'log' };
+const PARENT = { exercise:'#/exercises', workout:'#/workouts', day:'#/plan' };
 
 function render() {
   const parts = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
@@ -893,7 +1087,7 @@ function render() {
   $('#title').textContent = out.title;
   $('#view').innerHTML = out.html;
   $('#backBtn').hidden = !PARENT[name];
-  $('#backBtn').dataset.go = PARENT[name] || '';
+  $('#backBtn').dataset.parent = PARENT[name] || '';
   document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === TAB_OF[name]));
   mountFigures($('#view'));
   if (out.after) out.after();
@@ -910,7 +1104,11 @@ document.addEventListener('click', e => {
   if (fn) fn(el, e);
 });
 
-window.addEventListener('hashchange', render);
+let navDepth = 0;
+window.addEventListener('hashchange', () => { navDepth++; render(); });
+$('#backBtn').addEventListener('click', e => {
+  if (navDepth > 0) { navDepth -= 2; history.back(); } else location.hash = e.currentTarget.dataset.parent;
+});
 render();
 
 /* =========================================================
