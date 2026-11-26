@@ -80,6 +80,45 @@ main{padding:12px 16px calc(100px + var(--safe-b));max-width:680px;margin:0 auto
 .good li::before,.bad li::before{position:absolute;left:12px;top:9px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
 .good li::before{content:"✓";background:#e3ead3;color:var(--ok)}
 .bad li::before{content:"✕";background:#f3dcd3;color:#a4553a}
+
+/* Treningi */
+.wcard h3{margin:8px 0 2px;color:var(--brown-d)}
+.wfigs{display:flex;gap:6px}
+.fig.mini{height:64px;width:auto;flex:1;min-width:0}
+.card.exrow{display:flex;gap:12px;align-items:center;padding:10px}
+.exrow .fig.mini{width:92px;flex:none}
+
+/* Odtwarzacz */
+body.playing{overflow:hidden}
+#player{position:fixed;inset:0;z-index:50;background:var(--bg);overflow-y:auto;transition:background .3s}
+#player[hidden]{display:none}
+#player.pl-work{background:#f6e7d4}
+#player.pl-rest,#player.pl-prep{background:#e9eedc}
+.pl-inner{max-width:560px;margin:0 auto;padding:calc(10px + var(--safe-t)) 16px calc(20px + var(--safe-b));display:flex;flex-direction:column;align-items:stretch;min-height:100%}
+.pl-top{display:flex;align-items:center;gap:10px}
+.pl-x{width:48px;height:48px;border:0;border-radius:14px;background:rgba(255,255,255,.7);font-size:20px}
+.pl-title{flex:1;display:flex;flex-direction:column;font-size:14px;color:var(--muted)}
+.pl-title b{color:var(--brown-d);font-size:16px}
+.pl-total{font-variant-numeric:tabular-nums;color:var(--muted);font-size:15px}
+.pl-phase{text-align:center;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:var(--brown);margin-top:10px;font-size:15px}
+.pl-rest .pl-phase,.pl-prep .pl-phase{color:var(--ok)}
+.pl-fig .fig.pl{height:min(200px,24vh);background:rgba(255,255,255,.55)}
+.pl-fig{margin:6px 0}
+.pl-name{text-align:center;font-size:24px;font-weight:700;color:var(--brown-d);line-height:1.2}
+.pl-info{text-align:center;color:var(--muted);font-size:15px;margin:4px 8px 0;min-height:1.4em}
+.pl-timer{position:relative;width:min(170px,21vh);height:min(170px,21vh);margin:8px auto 4px}
+.pl-timer svg{width:100%;height:100%}
+.ring-bg{fill:none;stroke:rgba(123,82,53,.15);stroke-width:9}
+.ring{fill:none;stroke:var(--brown);stroke-width:9;stroke-linecap:round;transition:stroke-dashoffset .2s linear}
+.pl-rest .ring,.pl-prep .ring{stroke:var(--ok)}
+.pl-sec{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:min(60px,7.5vh);font-weight:700;color:var(--brown-d);font-variant-numeric:tabular-nums}
+.pl-paused .pl-sec{opacity:.45}
+.pl-next{text-align:center;min-height:1.5em;color:var(--brown-d)}
+.pl-ctrl{display:flex;gap:10px;margin-top:14px}
+.pl-b{flex:1;min-height:68px;border:0;border-radius:18px;background:rgba(255,255,255,.75);font-size:24px;color:var(--brown-d)}
+.pl-b.main{flex:2;background:var(--brown);color:#fff;font-size:20px;font-weight:700}
+.pl-done{text-align:center;justify-content:center}
+.big-emoji{font-size:72px;text-align:center;line-height:1.3}
 </style>
 </head>
 <body>
@@ -97,6 +136,8 @@ main{padding:12px 16px calc(100px + var(--safe-b));max-width:680px;margin:0 auto
   <button data-tab="plan"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Plan</button>
   <button data-tab="log"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11M9 8h6"/></svg>Dziennik</button>
 </nav>
+
+<div id="player" hidden></div>
 
 <script>
 'use strict';
@@ -536,6 +577,205 @@ const EX_BY_ID = Object.fromEntries(EXERCISES.map(e => [e.id, e]));
 const catName = id => (CATS.find(c => c.id === id) || {}).name || '';
 
 /* =========================================================
+   GOTOWE TRENINGI
+   ex: id ćwiczenia albo { id, note } (np. strona ciała)
+   ========================================================= */
+const WORKOUTS = [
+  { id:'rozgrzewka', name:'Rozgrzewka', kind:'rozgrzewka', desc:'Krótkie rozruszanie przed treningiem siłowym lub bieżnią.', work:30, rest:10, rounds:1,
+    ex:['krazenia-ramion','pajacyki','wysokie-kolana','przysiad','wykrok-bok','koci-grzbiet'] },
+  { id:'brzuch', name:'Brzuch i core', kind:'silowy', desc:'Spokojny trening brzucha i stabilizacji.', work:40, rest:20, rounds:2,
+    ex:['brzuszki','martwy-robak','deska','rowerek','mostek'] },
+  { id:'posladki', name:'Pośladki i nogi', kind:'silowy', desc:'Dół ciała: przysiady, mostki i wykroki.', work:40, rest:20, rounds:3,
+    ex:['przysiad','mostek','wykrok-tyl','kopniecia','przysiad-sumo'] },
+  { id:'gora', name:'Ramiona i plecy', kind:'silowy', desc:'Góra ciała i postawa – bez hantli.', work:40, rest:20, rounds:3,
+    ex:['pompki','ptak-pies','dipy','superman'] },
+  { id:'cale-start', name:'Całe ciało – start', kind:'silowy', desc:'Łagodny trening całego ciała dla początkujących.', work:30, rest:30, rounds:2,
+    ex:['pajacyki','przysiad','wspinaczka','mostek','wysokie-kolana','pompki','deska'] },
+  { id:'cale-sila', name:'Całe ciało – wyzwanie', kind:'silowy', desc:'Mocniejszy trening na później – 20 minut.', work:45, rest:15, rounds:4,
+    ex:['burpees','przysiad-wyskok','pompki','wykrok-bok','wspinaczka'] },
+  { id:'stretch', name:'Rozciąganie po bieżni', kind:'rozciaganie', desc:'Wyciszenie po bieganiu: nogi, biodra i plecy.', work:50, rest:10, rounds:1,
+    ex:['koci-grzbiet','pozycja-dziecka','sklon-przod',{ id:'przod-uda', note:'lewa noga' },{ id:'przod-uda', note:'prawa noga' },{ id:'wykrok-kleczny', note:'lewa noga z tyłu' },{ id:'wykrok-kleczny', note:'prawa noga z tyłu' },'sklon-boczny'] }
+];
+const W_BY_ID = Object.fromEntries(WORKOUTS.map(w => [w.id, w]));
+const KIND_NAMES = { silowy:'Siłowy', rozciaganie:'Rozciąganie', rozgrzewka:'Rozgrzewka', bieznia:'Bieżnia' };
+const exItem = x => typeof x === 'string' ? { id:x } : x;
+
+// Zamienia trening w listę kroków dla timera
+function buildSteps(w, level) {
+  const items = w.ex.map(exItem), steps = [];
+  steps.push({ type:'prep', sec: settings().prep, exId: items[0].id, note: items[0].note, level });
+  for (let r = 0; r < w.rounds; r++) items.forEach((it, i) => {
+    steps.push({ type:'work', sec: w.work, exId: it.id, note: it.note, level, round: r + 1, rounds: w.rounds, idx: i + 1, count: items.length });
+    const last = r === w.rounds - 1 && i === items.length - 1;
+    if (!last && w.rest > 0) { const nx = items[(i + 1) % items.length]; steps.push({ type:'rest', sec: w.rest, exId: nx.id, note: nx.note, level }); }
+  });
+  return steps;
+}
+const stepsMinutes = steps => Math.round(steps.filter(s => s.type !== 'prep').reduce((a, s) => a + s.sec, 0) / 60);
+const workoutSession = (w, level) => ({ title: w.name, kind: w.kind, steps: buildSteps(w, level), level });
+
+function settings() { return { sound: true, voice: true, prep: 10, ...store.get('settings', {}) }; }
+
+/* =========================================================
+   DŹWIĘK, WIBRACJE, BLOKADA WYGASZANIA EKRANU
+   ========================================================= */
+let audioCtx = null;
+function unlockAudio() {
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch (e) {}
+}
+function beep(freq = 880, dur = 0.12, vol = 0.25) {
+  if (!settings().sound || !audioCtx) return;
+  try {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime;
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(audioCtx.destination); o.start(t); o.stop(t + dur + 0.05);
+  } catch (e) {}
+}
+const vibrate = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+function say(text) {
+  if (!settings().voice || !('speechSynthesis' in window)) return;
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'pl-PL'; u.rate = 1.05; speechSynthesis.speak(u); } catch (e) {}
+}
+let wakeLock = null;
+async function keepAwake(on) {
+  try {
+    if (on && 'wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+    else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && PL.active && !PL.paused) keepAwake(true); });
+
+/* =========================================================
+   ODTWARZACZ TRENINGU (timer)
+   ========================================================= */
+const PL = { active:false };
+const PHASE = { prep:'Przygotuj się', work:'Ćwicz!', rest:'Przerwa' };
+
+function startSession(session) {
+  unlockAudio();
+  Object.assign(PL, { active:true, session, i:0, paused:false, startedAt:Date.now(), done:false });
+  document.body.classList.add('playing');
+  $('#player').hidden = false;
+  keepAwake(true);
+  beginStep();
+  clearInterval(PL.timer);
+  PL.timer = setInterval(tick, 200);
+}
+function beginStep() {
+  const s = PL.session.steps[PL.i];
+  PL.remain = s.sec; PL.endAt = Date.now() + s.sec * 1000; PL.lastSec = s.sec;
+  renderPlayer();
+  if (s.type === 'work') { beep(1046, 0.35, 0.3); vibrate(300); say(stepTitle(s)); }
+  else if (s.type === 'rest') { beep(523, 0.35, 0.3); vibrate([120, 80, 120]); say('Przerwa. Następnie: ' + stepTitle(s)); }
+  else say('Przygotuj się. ' + stepTitle(s));
+}
+function stepTitle(s) { const ex = EX_BY_ID[s.exId]; return (ex ? ex.name : s.label) + (s.note ? ', ' + s.note : ''); }
+function tick() {
+  if (!PL.active || PL.paused || PL.done) return;
+  PL.remain = Math.max(0, (PL.endAt - Date.now()) / 1000);
+  const sec = Math.ceil(PL.remain);
+  if (sec !== PL.lastSec) { PL.lastSec = sec; if (sec <= 3 && sec >= 1) beep(784, 0.1); }
+  updateTimer();
+  if (PL.remain <= 0) nextStep();
+}
+function nextStep() {
+  if (PL.i >= PL.session.steps.length - 1) return finishSession();
+  PL.i++; beginStep();
+}
+actions.plPause = () => {
+  if (PL.paused) { PL.paused = false; PL.endAt = Date.now() + PL.remain * 1000; keepAwake(true); }
+  else { PL.paused = true; PL.remain = Math.max(0, (PL.endAt - Date.now()) / 1000); }
+  renderPlayer();
+};
+actions.plNext = () => nextStep();
+actions.plPrev = () => {
+  const s = PL.session.steps[PL.i];
+  if (s.sec - PL.remain > 3 || PL.i === 0) { /* od początku bieżącego kroku */ }
+  else PL.i--;
+  const wasPaused = PL.paused; PL.paused = false; beginStep();
+  if (wasPaused) actions.plPause();
+};
+actions.plClose = () => {
+  if (PL.done || confirm('Przerwać trening? Nie zostanie zapisany w dzienniku.')) closePlayer();
+};
+actions.plSaveEarly = () => { if (confirm('Zakończyć teraz i zapisać trening jako wykonany?')) finishSession(); };
+function closePlayer() {
+  clearInterval(PL.timer); PL.active = false;
+  keepAwake(false);
+  try { speechSynthesis.cancel(); } catch (e) {}
+  document.body.classList.remove('playing');
+  $('#player').hidden = true; $('#player').innerHTML = '';
+  render();
+}
+function finishSession() {
+  PL.done = true; clearInterval(PL.timer);
+  const minutes = Math.max(1, Math.round((Date.now() - PL.startedAt) / 60000));
+  logAdd({ date: ymd(new Date()), title: PL.session.title, kind: PL.session.kind, minutes, planKey: PL.session.planKey || null, level: PL.session.level });
+  beep(659, 0.15); setTimeout(() => beep(784, 0.15), 160); setTimeout(() => beep(1046, 0.4), 320);
+  vibrate([200, 100, 200, 100, 400]); say('Brawo! Trening ukończony.');
+  keepAwake(false);
+  $('#player').innerHTML = `<div class="pl-inner pl-done">
+      <div class="big-emoji">🎉</div>
+      <h2>Brawo!</h2>
+      <p>Ukończyłaś: <b>${esc(PL.session.title)}</b></p>
+      <p class="muted">Czas: ${minutes} min · zapisano w dzienniku</p>
+      <button class="btn" data-act="plClose">Gotowe</button>
+      <button class="btn sec" data-act="plToLog">Zobacz dziennik</button>
+    </div>`;
+}
+actions.plToLog = () => { closePlayer(); location.hash = '#/log'; };
+
+function renderPlayer() {
+  const st = PL.session.steps, s = st[PL.i], ex = EX_BY_ID[s.exId];
+  const nextWork = st.slice(PL.i + 1).find(x => x.type === 'work');
+  const workSteps = st.filter(x => x.type === 'work'), workIdx = st.slice(0, PL.i + 1).filter(x => x.type === 'work').length;
+  const lvl = s.level ?? 0;
+  const info = ex ? `${esc(LEVEL_NAMES[lvl])}: ${esc(ex.levels[lvl])}` : esc(s.sub || '');
+  $('#player').className = 'pl-' + s.type + (PL.paused ? ' pl-paused' : '');
+  $('#player').innerHTML = `<div class="pl-inner">
+    <div class="pl-top">
+      <button class="pl-x" data-act="plClose" aria-label="Zamknij">✕</button>
+      <div class="pl-title"><b>${esc(PL.session.title)}</b><span>${s.type === 'work' ? `Ćwiczenie ${workIdx} z ${workSteps.length}` + (s.rounds > 1 ? ` · runda ${s.round}/${s.rounds}` : '') : PHASE[s.type]}</span></div>
+      <span class="pl-total" id="plTotal"></span>
+    </div>
+    <div class="pl-phase">${PL.paused ? 'Pauza' : PHASE[s.type]}${s.type !== 'work' ? ' – następnie:' : ''}</div>
+    <div class="pl-fig">${ex ? figureSVG(ex, { animate: true, cls: 'pl' }) : `<div class="big-emoji">${s.icon || '🏃‍♀️'}</div>`}</div>
+    <div class="pl-name">${esc(stepTitle(s))}</div>
+    <div class="pl-info">${info}</div>
+    <div class="pl-timer">
+      <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="ring-bg"/><circle cx="60" cy="60" r="52" class="ring" id="plRing" transform="rotate(-90 60 60)"/></svg>
+      <div class="pl-sec" id="plSec"></div>
+    </div>
+    <div class="pl-next">${s.type === 'work' ? (nextWork ? `Następnie: <b>${esc(stepTitle(nextWork))}</b>` : 'To ostatnie ćwiczenie! 💪') : ''}</div>
+    <div class="pl-ctrl">
+      <button class="pl-b" data-act="plPrev" aria-label="Wstecz">⏮</button>
+      <button class="pl-b main" data-act="plPause">${PL.paused ? '▶ Wznów' : '❚❚ Pauza'}</button>
+      <button class="pl-b" data-act="plNext" aria-label="Pomiń">⏭</button>
+    </div>
+    ${PL.paused ? `<button class="btn sec" data-act="plSaveEarly">Zakończ i zapisz</button>` : ''}
+  </div>`;
+  mountFigures($('#player'), false);
+  updateTimer();
+}
+function updateTimer() {
+  const st = PL.session.steps, s = st[PL.i];
+  const sec = Math.ceil(PL.remain);
+  const el = $('#plSec'); if (!el) return;
+  el.textContent = sec >= 60 ? `${Math.floor(sec / 60)}:${pad(sec % 60)}` : sec;
+  const C = 2 * Math.PI * 52;
+  const ring = $('#plRing'); ring.style.strokeDasharray = C; ring.style.strokeDashoffset = C * (1 - PL.remain / s.sec);
+  const left = PL.remain + st.slice(PL.i + 1).reduce((a, x) => a + x.sec, 0);
+  $('#plTotal').textContent = `${Math.floor(left / 60)}:${pad(Math.floor(left % 60))}`;
+}
+
+/* =========================================================
+   DZIENNIK – zapis danych
+   ========================================================= */
+const logAll = () => store.get('log', []);
+function logAdd(entry) { const l = logAll(); l.push({ ...entry, ts: Date.now() }); store.set('log', l); }
+
+/* =========================================================
    WIDOKI
    ========================================================= */
 let exCat = 'all';
@@ -548,6 +788,18 @@ function renderLevels(id) {
   $('#lvlText').textContent = ex.levels[l];
 }
 const LEVEL_NAMES = ['Łatwy', 'Średni', 'Trudny'];
+actions.wlevel = el => { store.set('wlevel', +el.dataset.lvl); render(); };
+actions.startWorkout = el => startSession(workoutSession(W_BY_ID[el.dataset.id], store.get('wlevel', 0)));
+actions.setting = el => { const s = settings(); s[el.dataset.key] = !s[el.dataset.key]; store.set('settings', s); render(); if (s.sound) { unlockAudio(); beep(); } };
+function soundSettingsHTML() {
+  const s = settings();
+  return `<h2>Ustawienia timera</h2>
+    <div class="row">
+      <button class="chip ${s.sound ? 'on' : ''}" data-act="setting" data-key="sound">🔔 Sygnały ${s.sound ? 'wł.' : 'wył.'}</button>
+      <button class="chip ${s.voice ? 'on' : ''}" data-act="setting" data-key="voice">🗣 Głos ${s.voice ? 'wł.' : 'wył.'}</button>
+    </div>
+    <p class="muted small">Ekran nie wygaśnie w trakcie treningu (jeśli przeglądarka na to pozwala). Na iPhonie wyłącz tryb cichy, aby słyszeć sygnały.</p>`;
+}
 const views = {
   today() {
     const d = new Date();
@@ -591,7 +843,38 @@ const views = {
       <h2>Najczęstsze błędy</h2>
       <ul class="bad">${ex.mistakes.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` };
   },
-  workouts() { return { title: 'Treningi', html: `<div class="empty">Gotowe treningi z timerem – etap 3.</div>` }; },
+  workouts() {
+    const lvl = store.get('wlevel', 0);
+    return { title: 'Treningi', html: `
+      <p class="muted">Wybierz trening – timer poprowadzi Cię przez ćwiczenia i przerwy.</p>
+      ${WORKOUTS.map(w => { const m = stepsMinutes(buildSteps(w, lvl)); const n = w.ex.length; return `
+        <button class="card tap wcard" data-go="#/workout/${w.id}">
+          <div class="wfigs">${[...new Set(w.ex.map(x => exItem(x).id))].slice(0, 3).map(id => figureSVG(EX_BY_ID[id], { frame: 1, cls: 'mini' })).join('')}</div>
+          <h3>${esc(w.name)}</h3>
+          <p class="muted small">${esc(w.desc)}</p>
+          <span class="tag">⏱ ${m} min</span><span class="tag">${n} ćwiczeń × ${w.rounds} ${w.rounds === 1 ? 'runda' : 'rundy'}</span><span class="tag">${w.work}s / ${w.rest}s</span>
+        </button>`; }).join('')}` };
+  },
+  workout(id) {
+    const w = W_BY_ID[id]; if (!w) return views.workouts();
+    const lvl = store.get('wlevel', 0), steps = buildSteps(w, lvl);
+    return { title: w.name, html: `
+      <div class="card hero">
+        <h2 style="margin:0 0 4px">${esc(w.name)}</h2>
+        <p class="muted">${esc(w.desc)}</p>
+        <p><b>${stepsMinutes(steps)} min</b> · praca ${w.work} s, przerwa ${w.rest} s · ${w.rounds} ${w.rounds === 1 ? 'runda' : 'rundy'}</p>
+      </div>
+      <h2>Poziom ćwiczeń</h2>
+      <div class="row">${LEVEL_NAMES.map((n, i) => `<button class="chip ${i === lvl ? 'on' : ''}" data-act="wlevel" data-lvl="${i}">${n}</button>`).join('')}</div>
+      <button class="btn" data-act="startWorkout" data-id="${w.id}">▶ Rozpocznij trening</button>
+      <h2>Ćwiczenia</h2>
+      ${w.ex.map(exItem).map((it, i) => { const e = EX_BY_ID[it.id]; return `
+        <button class="card tap exrow" data-go="#/exercise/${e.id}">
+          ${figureSVG(e, { frame: 1, cls: 'mini' })}
+          <div><b>${i + 1}. ${esc(e.name)}</b>${it.note ? ` <span class="muted">(${esc(it.note)})</span>` : ''}<div class="muted small">${esc(e.levels[lvl])}</div></div>
+        </button>`; }).join('')}
+      ${soundSettingsHTML()}` };
+  },
   plan() { return { title: 'Plan 8 tygodni', html: `<div class="empty">Plan tygodniowy – etap 4.</div>` }; },
   log() { return { title: 'Dziennik', html: `<div class="empty">Dziennik i kalendarz – etap 5.</div>` }; }
 };
