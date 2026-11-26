@@ -63,6 +63,23 @@ main{padding:12px 16px calc(100px + var(--safe-b));max-width:680px;margin:0 auto
 .hero{background:linear-gradient(135deg,#8a5d3d,#b9814f);color:#fff;border:0}
 .hero .muted{color:#f5e6d3}
 .empty{text-align:center;color:var(--muted);padding:30px 10px}
+
+/* Ćwiczenia */
+.exgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.excard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:8px 8px 12px;text-align:left;display:flex;flex-direction:column;gap:2px;box-shadow:0 2px 8px rgba(75,48,32,.05)}
+.excard:active{transform:scale(.98)}
+.exname{font-weight:600;font-size:16px;line-height:1.25;margin-top:4px;color:var(--brown-d)}
+.fig{display:block;width:100%;border-radius:12px;background:#f8efe3}
+.fig.thumb{height:110px}
+.fig.big{height:250px}
+.figcard{padding:8px}
+.steps,.good,.bad{padding-left:0;list-style:none;margin:0}
+.steps{counter-reset:s}
+.steps li,.good li,.bad li{position:relative;padding:10px 12px 10px 48px;margin:8px 0;background:var(--card);border:1px solid var(--line);border-radius:14px}
+.steps li::before{counter-increment:s;content:counter(s);position:absolute;left:10px;top:9px;width:28px;height:28px;border-radius:50%;background:var(--brown);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px}
+.good li::before,.bad li::before{position:absolute;left:12px;top:9px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+.good li::before{content:"✓";background:#e3ead3;color:var(--ok)}
+.bad li::before{content:"✕";background:#f3dcd3;color:#a4553a}
 </style>
 </head>
 <body>
@@ -98,14 +115,439 @@ const MIESIACE = ['styczeń','luty','marzec','kwiecień','maj','czerwiec','lipie
 const MIESIACE_D = ['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
 const fmtDate = d => `${d.getDate()} ${MIESIACE_D[d.getMonth()]}`;
 
+const actions = {};   // akcje przycisków (data-act)
 const store = {
   get(k, def) { try { const v = localStorage.getItem('mt_' + k); return v === null ? def : JSON.parse(v); } catch (e) { return def; } },
   set(k, v) { try { localStorage.setItem('mt_' + k, JSON.stringify(v)); } catch (e) {} }
 };
 
 /* =========================================================
+   ANIMOWANA SYLWETKA (SVG)
+   Kąty w stopniach: 0 = w dół, 90 = do przodu (w prawo), 180 = w górę, -90 = do tyłu.
+   t – tułów (od bioder do szyi), n – głowa, ua/fa – ramię/przedramię,
+   th/sh – udo/łydka, f – stopa, c – wygięcie kręgosłupa, y – uniesienie (skok).
+   1 = bliższa strona (ciemniejsza), 2 = dalsza (jaśniejsza).
+   ========================================================= */
+const FIG = { torso:52, ua:26, fa:25, th:42, sh:40, foot:11, head:10, sw:11, hw:7 };
+const BASE_POSE = { t:180, n:null, c:0, ua1:6, fa1:12, ua2:-6, fa2:-2, th1:3, sh1:2, th2:-3, sh2:-3, f1:null, f2:null, y:0 };
+const POSE_KEYS = Object.keys(BASE_POSE);
+const vec = (a, len) => { const r = a * Math.PI / 180; return [Math.sin(r) * len, Math.cos(r) * len]; };
+const addv = (a, b) => [a[0] + b[0], a[1] + b[1]];
+
+function poseJoints(p, front) {
+  const [tx, ty] = vec(p.t, 1);
+  const J = { hip:[0, 0], neck:[tx * FIG.torso, ty * FIG.torso] };
+  J.head = addv(J.neck, vec(p.n, FIG.head + 3));
+  const px = -ty, py = tx;            // kierunek prostopadły do tułowia (barki w widoku z przodu)
+  J.ctrl = [J.neck[0] / 2 + ty * p.c, J.neck[1] / 2 - tx * p.c];
+  for (const s of [1, 2]) {
+    const m = front && s === 2 ? -1 : 1;           // w widoku z przodu lewa strona to lustro prawej
+    const side = front ? (s === 1 ? 1 : -1) : 0;
+    const v = (a, len) => { const [x, y] = vec(a, len); return [x * m, y]; };
+    const sho = [J.neck[0] + px * FIG.sw * side, J.neck[1] + py * FIG.sw * side];
+    const hp = [px * FIG.hw * side, py * FIG.hw * side];
+    J['sho' + s] = sho;
+    J['el' + s] = addv(sho, v(p['ua' + s], FIG.ua));
+    J['ha' + s] = addv(J['el' + s], v(p['fa' + s], FIG.fa));
+    J['hp' + s] = hp;
+    J['kn' + s] = addv(hp, v(p['th' + s], FIG.th));
+    J['an' + s] = addv(J['kn' + s], v(p['sh' + s], FIG.sh));
+    J['to' + s] = addv(J['an' + s], v(p['f' + s], front ? 6 : FIG.foot));
+  }
+  return J;
+}
+const ANCHORS = { hip:'hip', toe1:'to1', toe2:'to2', hand1:'ha1', hand2:'ha2', knee1:'kn1', knee2:'kn2' };
+function anchorX(J, a) { return a === 'feet' ? (J.to1[0] + J.to2[0]) / 2 : J[ANCHORS[a] || 'hip'][0]; }
+function lowest(J) {
+  let low = -Infinity;
+  for (const k in J) { if (k === 'ctrl') continue; low = Math.max(low, J[k][1] + (k === 'head' ? FIG.head : 3.5)); }
+  return low;
+}
+// Ustawia sylwetkę na podłodze (y = 0) i w stałym punkcie zaczepienia
+function placePose(ex, p) {
+  const A = ex.anim, J = poseJoints(p, A.front);
+  let dx, dy;
+  if (A.fix) { const a = J[ANCHORS[A.fix]]; dx = -a[0]; dy = A._fixY - a[1]; }
+  else { dx = -anchorX(J, A.anchor); dy = -lowest(J) - (p.y || 0); }
+  for (const k in J) J[k] = [J[k][0] + dx, J[k][1] + dy];
+  return J;
+}
+function normPose(p) {
+  const q = { ...BASE_POSE, ...p };
+  if (q.n == null) q.n = q.t;
+  if (q.f1 == null) q.f1 = q.sh1 + 90;
+  if (q.f2 == null) q.f2 = q.sh2 + 90;
+  return q;
+}
+function interpPose(a, b, k) { const o = {}; for (const key of POSE_KEYS) o[key] = a[key] + (b[key] - a[key]) * k; return o; }
+
+function prepAnim(ex) {
+  const A = ex.anim;
+  if (A._k) return A;
+  A._k = A.frames.map(f => ({ pose: normPose({ ...A.base, ...f }), d: f.d || A.d || 900, h: f.h ?? A.h ?? 250 }));
+  if (A.fix) { const J0 = poseJoints(A._k[0].pose, A.front); A._fixY = J0[ANCHORS[A.fix]][1] - lowest(J0); }
+  A._total = A._k.reduce((s, f) => s + f.d + f.h, 0);
+  // obszar rysunku – obejmuje wszystkie pozy i stany pośrednie
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = 6;
+  for (let i = 0; i < A._k.length; i++) for (const k of [0, .5]) {
+    const p = interpPose(A._k[i].pose, A._k[(i + 1) % A._k.length].pose, k);
+    const J = placePose(ex, p);
+    for (const key in J) {
+      if (key === 'ctrl') continue;
+      const r = key === 'head' ? FIG.head : 4;
+      x0 = Math.min(x0, J[key][0] - r); x1 = Math.max(x1, J[key][0] + r);
+      y0 = Math.min(y0, J[key][1] - r); y1 = Math.max(y1, J[key][1] + r);
+    }
+  }
+  if (A.props && A.props.includes('wall')) x0 -= 10;
+  if (A.props && A.props.includes('chair')) x0 -= 34;
+  let w = x1 - x0 + 24, h = y1 - y0 + 24;
+  const minW = 170, minH = 130;
+  if (w < minW) { x0 -= (minW - w) / 2; w = minW; }
+  if (h < minH) { y0 -= (minH - h) - 6; h = minH; }
+  if (w / h < 1.15) { const nw = h * 1.15; x0 -= (nw - w) / 2; w = nw; }
+  A._vb = [x0 - 12, y0 - 12, w, h];
+  return A;
+}
+
+const pt = p => p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+function figPaths(J, front) {
+  const o = {
+    arm1: `M${pt(J.sho1)}L${pt(J.el1)}L${pt(J.ha1)}`,
+    arm2: `M${pt(J.sho2)}L${pt(J.el2)}L${pt(J.ha2)}`,
+    leg1: `M${pt(J.hp1)}L${pt(J.kn1)}L${pt(J.an1)}L${pt(J.to1)}`,
+    leg2: `M${pt(J.hp2)}L${pt(J.kn2)}L${pt(J.an2)}L${pt(J.to2)}`,
+    torso: `M${pt(J.hip)}Q${pt(J.ctrl)} ${pt(J.neck)}` + (front ? `M${pt(J.sho2)}L${pt(J.sho1)}M${pt(J.hp2)}L${pt(J.hp1)}` : '')
+  };
+  return o;
+}
+function propsSVG(ex) {
+  const A = ex.anim; if (!A.props) return '';
+  const J = placePose(ex, A._k[0].pose); let s = '';
+  if (A.props.includes('wall')) {
+    const x = Math.min(J.hip[0], J.neck[0], J.head[0] - FIG.head) - 6;
+    s += `<rect x="${x - 10}" y="-200" width="10" height="200" fill="#e3d2bb"/>`;
+  }
+  if (A.props.includes('chair')) {
+    const hx = J.ha1[0], hy = J.ha1[1] + 4;
+    s += `<rect x="${hx - 34}" y="${hy}" width="40" height="6" rx="2" fill="#c9a37c"/>` +
+         `<rect x="${hx - 32}" y="${hy}" width="5" height="${-hy}" fill="#c9a37c"/><rect x="${hx - 1}" y="${hy}" width="5" height="${-hy}" fill="#c9a37c"/>` +
+         `<rect x="${hx - 34}" y="${hy - 34}" width="5" height="34" fill="#c9a37c"/>`;
+  }
+  return s;
+}
+let figUid = 0;
+function figureSVG(ex, opts = {}) {
+  const A = prepAnim(ex);
+  const fi = Math.min(opts.frame ?? 0, A._k.length - 1);
+  const J = placePose(ex, A._k[fi].pose), P = figPaths(J, A.front);
+  const [x, y, w, h] = A._vb;
+  const id = 'f' + (++figUid);
+  return `<svg class="fig ${opts.cls || ''}" viewBox="${x.toFixed(1)} ${y.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}" data-fig="${ex.id}" ${opts.animate ? 'data-anim="1"' : ''} preserveAspectRatio="xMidYMax meet" aria-label="Animacja: ${esc(ex.name)}">
+    <rect x="${x - 50}" y="3" width="${w + 100}" height="${h}" fill="#efe2d0"/>
+    <line x1="${x - 50}" y1="3" x2="${x + w + 50}" y2="3" stroke="#d6bf9f" stroke-width="2"/>
+    ${A.mat ? `<rect x="${x + 8}" y="0" width="${w - 16}" height="4" rx="2" fill="#c9a37c"/>` : ''}
+    ${propsSVG(ex)}
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path data-p="arm2" d="${P.arm2}" stroke="${A.front ? '#6b4630' : '#c4a07e'}" stroke-width="7"/>
+      <path data-p="leg2" d="${P.leg2}" stroke="${A.front ? '#6b4630' : '#c4a07e'}" stroke-width="8"/>
+      <path data-p="torso" d="${P.torso}" stroke="#5b3a26" stroke-width="9"/>
+      <circle data-p="head" cx="${J.head[0].toFixed(1)}" cy="${J.head[1].toFixed(1)}" r="${FIG.head}" fill="#5b3a26"/>
+      <path data-p="leg1" d="${P.leg1}" stroke="#5b3a26" stroke-width="8"/>
+      <path data-p="arm1" d="${P.arm1}" stroke="#5b3a26" stroke-width="7"/>
+    </g></svg>`;
+}
+
+// Pętla animacji – jedna dla wszystkich widocznych sylwetek
+const liveFigs = [];
+let figRaf = 0;
+const ease = k => 0.5 - Math.cos(Math.PI * k) / 2;
+function mountFigures(root, reset = true) {
+  if (reset) liveFigs.length = 0;
+  root.querySelectorAll('svg[data-anim]').forEach(svg => {
+    const ex = EX_BY_ID[svg.dataset.fig]; if (!ex) return;
+    const parts = {}; svg.querySelectorAll('[data-p]').forEach(el => parts[el.dataset.p] = el);
+    liveFigs.push({ svg, ex, parts, start: performance.now() });
+  });
+  if (liveFigs.length && !figRaf) figRaf = requestAnimationFrame(tickFigures);
+}
+function tickFigures(now) {
+  for (let i = liveFigs.length - 1; i >= 0; i--) {
+    const f = liveFigs[i];
+    if (!f.svg.isConnected) { liveFigs.splice(i, 1); continue; }
+    if (f.paused) continue;
+    const A = f.ex.anim, K = A._k;
+    let t = (now - f.start) % A._total, j = 0;
+    while (t >= K[j].h + K[j].d) { t -= K[j].h + K[j].d; j++; }
+    const k = t < K[j].h ? 0 : ease((t - K[j].h) / K[j].d);
+    const J = placePose(f.ex, interpPose(K[j].pose, K[(j + 1) % K.length].pose, k));
+    const P = figPaths(J, A.front);
+    for (const key in P) f.parts[key].setAttribute('d', P[key]);
+    f.parts.head.setAttribute('cx', J.head[0].toFixed(1)); f.parts.head.setAttribute('cy', J.head[1].toFixed(1));
+  }
+  figRaf = liveFigs.length ? requestAnimationFrame(tickFigures) : 0;
+}
+
+/* =========================================================
+   BAZA ĆWICZEŃ
+   ========================================================= */
+const CATS = [
+  { id:'brzuch', name:'Brzuch' }, { id:'posladki', name:'Pośladki' }, { id:'nogi', name:'Nogi' },
+  { id:'gora', name:'Ramiona i plecy' }, { id:'cale', name:'Całe ciało' }, { id:'stretch', name:'Rozciąganie' }
+];
+// Pozycje wyjściowe wykorzystywane przez wiele ćwiczeń
+const SUP = { t:-90, n:-90, ua1:90, fa1:90, ua2:88, fa2:88, th1:136, sh1:10, th2:132, sh2:7, f1:90, f2:90 };   // leżenie na plecach, nogi ugięte
+const FOURS = { t:100, n:108, ua1:0, fa1:0, ua2:3, fa2:3, th1:0, sh1:-90, f1:-90, th2:3, sh2:-90, f2:-90 };   // klęk podparty
+const HPLANK = { t:112, n:112, ua1:0, fa1:0, ua2:3, fa2:3, th1:-68, sh1:-68, th2:-69, sh2:-69 };             // podpór na prostych rękach
+const STAND = { f1:90, f2:90 };
+const CLASP = { ua1:22, fa1:-128, ua2:22, fa2:-128 };   // dłonie złączone przed klatką (widok z przodu)
+
+const EXERCISES = [
+  /* ---------------- BRZUCH ---------------- */
+  { id:'brzuszki', cat:'brzuch', name:'Brzuszki (spięcia)', muscles:'mięsień prosty brzucha',
+    levels:['Unosisz tylko głowę i barki o kilka centymetrów, ręce wzdłuż ciała.','Klasyczne spięcie – łopatki odrywają się od podłogi, ręce sięgają w stronę kolan.','Ręce skrzyżowane na klatce, 2 s pauzy w górze i powolne opuszczanie.'],
+    steps:['Połóż się na plecach, ugnij nogi, stopy płasko na podłodze na szerokość bioder.','Wyciągnij ręce w stronę kolan, brodę lekko przyciągnij (jakbyś trzymała pod nią jabłko).','Z wydechem napnij brzuch i unieś głowę, barki i łopatki nad podłogę.','Zatrzymaj się na chwilę w górze, a z wdechem powoli wróć.'],
+    tips:['Ruch jest krótki – nie musisz siadać.','Lędźwie cały czas przyklejone do maty.','Wydech przy unoszeniu, wdech przy opuszczaniu.'],
+    mistakes:['Ciągnięcie głowy rękami lub szarpanie.','Odrywanie stóp i lędźwi od podłogi.','Zbyt szybkie tempo „na rozpęd”.'],
+    anim:{ anchor:'hip', mat:true, frames:[ SUP, { ...SUP, t:-122, n:-130, ua1:108, fa1:108, ua2:106, fa2:106 } ] } },
+
+  { id:'deska', cat:'brzuch', name:'Deska na przedramionach', muscles:'brzuch, cały korpus, barki',
+    levels:['Deska na kolanach – ciało prosto od kolan do głowy, 15–20 s.','Klasyczna deska na przedramionach i palcach stóp, 20–30 s.','Deska z naprzemiennym unoszeniem stopy na 2 s, 40 s.'],
+    steps:['Uklęknij i oprzyj przedramiona na macie – łokcie dokładnie pod barkami.','Wyprostuj nogi do tyłu i oprzyj się na palcach stóp.','Ustaw ciało w jednej linii od pięt do głowy, wciągnij pępek i napnij pośladki.','Oddychaj spokojnie i trzymaj pozycję przez zadany czas.'],
+    tips:['Patrz w podłogę między dłońmi – szyja przedłuża kręgosłup.','Odpychaj podłogę przedramionami, żeby łopatki się nie zapadały.','Lepiej krócej, ale technicznie.'],
+    mistakes:['Biodra opadające w dół (obciąża lędźwie).','Pupa wysoko w górze.','Wstrzymywanie oddechu.'],
+    anim:{ anchor:'toe1', mat:true, h:0, d:1600, frames:[ { t:103, n:100, ua1:0, fa1:90, ua2:3, fa2:90, th1:-77, sh1:-77, th2:-78, sh2:-78 }, { t:104, n:102, ua1:0, fa1:90, ua2:3, fa2:90, th1:-76, sh1:-76, th2:-77, sh2:-77 } ] } },
+
+  { id:'martwy-robak', cat:'brzuch', name:'Martwy robak', muscles:'głębokie mięśnie brzucha, stabilizacja',
+    levels:['Ręce zostają w górze, na zmianę dotykasz piętą podłogi.','Jednocześnie wyciągasz przeciwną rękę i nogę.','Bardzo wolno – 4 s w każdą stronę, ręka i noga tuż nad podłogą.'],
+    steps:['Połóż się na plecach, ręce wyprostowane w górę nad barkami.','Unieś nogi ugięte pod kątem prostym – kolana nad biodrami.','Dociśnij lędźwie do podłogi i z wydechem powoli wyprostuj jedną nogę, a przeciwną rękę wyciągnij za głowę.','Wróć do środka i powtórz na drugą stronę.'],
+    tips:['Lędźwie przez cały czas przyklejone do maty.','Ruch powolny i kontrolowany.','Wydech w trakcie wyprostu.'],
+    mistakes:['Wyginanie pleców w łuk przy prostowaniu nogi.','Szybkie, „machające” ruchy.','Wstrzymywanie oddechu.'],
+    anim:(() => { const b = { t:-90, n:-90, ua1:180, fa1:180, ua2:177, fa2:177, th1:180, sh1:90, f1:180, th2:176, sh2:88, f2:178 };
+      return { anchor:'hip', mat:true, d:1100, frames:[ b, { ...b, ua1:262, fa1:262, th2:98, sh2:98, f2:188 }, b, { ...b, ua2:262, fa2:262, th1:98, sh1:98, f1:188 } ] }; })() },
+
+  { id:'unoszenie-nog', cat:'brzuch', name:'Unoszenie nóg leżąc', muscles:'dolna część brzucha, zginacze bioder',
+    levels:['Na zmianę jedna noga, druga ugięta ze stopą na podłodze.','Obie nogi proste, opuszczane do ok. 45°.','Obie nogi proste, opuszczane powoli tuż nad podłogę.'],
+    steps:['Połóż się na plecach, ręce wzdłuż ciała, dłonie do podłogi.','Dociśnij lędźwie do maty i napnij brzuch.','Z wydechem unieś proste nogi do pionu.','Z wdechem powoli opuść nogi – tylko tak nisko, jak dasz radę utrzymać lędźwie przy podłodze.'],
+    tips:['Jeśli lędźwie się odrywają, skróć zakres albo ugnij kolana.','Opuszczaj wolniej, niż unosisz.','Możesz wsunąć dłonie pod pośladki dla wsparcia.'],
+    mistakes:['Odrywanie lędźwi od maty.','Rzucanie nogami w dół.','Napinanie szyi i barków.'],
+    anim:{ anchor:'hip', mat:true, d:1200, frames:[ { t:-90, n:-90, ua1:90, fa1:90, ua2:88, fa2:88, th1:100, sh1:100, th2:98, sh2:98 }, { t:-90, n:-90, ua1:90, fa1:90, ua2:88, fa2:88, th1:176, sh1:176, th2:174, sh2:174 } ] } },
+
+  { id:'rowerek', cat:'brzuch', name:'Rowerek', muscles:'mięśnie skośne i prosty brzucha',
+    levels:['Głowa i barki leżą na macie – pracują tylko nogi.','Barki uniesione, łokieć kierujesz do przeciwnego kolana.','Wolne tempo z 1 s pauzą przy każdym skręcie.'],
+    steps:['Połóż się na plecach, dłonie lekko za głową, łokcie szeroko.','Unieś łopatki nad podłogę, a nogi ugięte nad matę.','Przyciągnij jedno kolano, drugą nogę wyprostuj i skręć tułów, kierując przeciwny łokieć do kolana.','Zmieniaj strony płynnie, jak przy jeździe na rowerze.'],
+    tips:['Skręt wychodzi z tułowia, a nie z ruchu łokcia.','Im wyżej prosta noga, tym łatwiej.','Oddychaj rytmicznie – wydech przy skręcie.'],
+    mistakes:['Ciągnięcie głowy dłońmi.','Pośpiech i machanie łokciami.','Wygięte w łuk lędźwie.'],
+    anim:(() => { const b = { t:-116, n:-124, ua1:172, fa1:-112, ua2:168, fa2:-115 };
+      return { anchor:'hip', mat:true, d:700, h:150, frames:[ { ...b, th1:150, sh1:62, th2:104, sh2:104 }, { ...b, t:-119, th1:104, sh1:104, th2:150, sh2:62 } ] }; })() },
+
+  /* ---------------- POŚLADKI ---------------- */
+  { id:'mostek', cat:'posladki', name:'Mostek biodrowy', muscles:'pośladki, tył uda',
+    levels:['Unosisz biodra do połowy wysokości.','Pełny mostek z 2 s pauzą i mocnym spięciem pośladków u góry.','3 s powolnego opuszczania i stopy bliżej siebie.'],
+    steps:['Połóż się na plecach, ugnij nogi, stopy płasko na szerokość bioder, blisko pośladków.','Ręce połóż wzdłuż ciała.','Z wydechem dociśnij pięty i unieś biodra, aż ciało utworzy linię od kolan do barków.','Mocno ściśnij pośladki na górze, potem powoli opuść biodra.'],
+    tips:['Pchaj przez pięty, nie przez palce.','Kolana równolegle – nie uciekają do środka.','Na górze lekko wciągnij brzuch, żeby nie przeginać lędźwi.'],
+    mistakes:['Wyginanie lędźwi zamiast pracy pośladków.','Stopy za daleko od pośladków.','Kolana schodzące do środka.'],
+    anim:{ anchor:'toe1', mat:true, d:1000, frames:[ { ...SUP, th1:135, th2:131 }, { ...SUP, t:-70, n:-88, th1:105, sh1:10, th2:101, sh2:8 } ] } },
+
+  { id:'mostek-jednonoz', cat:'posladki', name:'Mostek jednonóż', muscles:'pośladki, stabilizacja miednicy',
+    levels:['Druga noga ugięta, stopa tylko lekko nad podłogą.','Druga noga wyprostowana w linii z udem.','3 s pauzy u góry i powolne opuszczanie.'],
+    steps:['Ustaw się jak do mostka biodrowego.','Wyprostuj jedną nogę, utrzymując oba uda na tej samej wysokości.','Dociśnij piętę nogi podporowej i unieś biodra.','Opuść biodra powoli, nie dotykając pośladkami podłogi. W połowie czasu zmień nogę.'],
+    tips:['Miednica równo – nie opada na stronę uniesionej nogi.','Ręce dociśnięte do podłogi pomagają w równowadze.','Wykonuj wolno.'],
+    mistakes:['Skręcanie bioder.','Pchanie palcami zamiast piętą.','Odbijanie się od podłogi.'],
+    anim:{ anchor:'toe2', mat:true, d:1000, frames:[ { ...SUP, th2:134, sh2:10, th1:134, sh1:134 }, { ...SUP, t:-70, n:-88, th2:104, sh2:10, th1:104, sh1:104 } ] } },
+
+  { id:'kopniecia', cat:'posladki', name:'Kopnięcia w klęku podpartym', muscles:'pośladek wielki',
+    levels:['Unosisz kolano tylko do wysokości bioder.','Stopa wypychana w sufit, 1 s pauzy u góry.','3 krótkie pulsy u góry przy każdym powtórzeniu.'],
+    steps:['Uklęknij w podporze: dłonie pod barkami, kolana pod biodrami.','Napnij brzuch, plecy proste jak blat stołu.','Nie prostując kolana, unieś jedną nogę do tyłu i w górę – podeszwa kieruje się w sufit.','Wróć kolanem pod biodro (bez odkładania na podłogę) i powtórz. W połowie czasu zmień nogę.'],
+    tips:['Ruch napędza pośladek, a nie lędźwie.','Biodra równolegle do podłogi.','Głowa w przedłużeniu kręgosłupa.'],
+    mistakes:['Wyginanie pleców w „siodło”.','Obracanie bioder na bok.','Zbyt szybkie wymachy.'],
+    anim:{ anchor:'hand1', mat:true, d:800, frames:[ FOURS, { ...FOURS, th1:-92, sh1:-176, f1:-86 } ] } },
+
+  { id:'odwodzenie-tyl', cat:'posladki', name:'Odwodzenie nogi w tył stojąc', muscles:'pośladki, tył uda',
+    levels:['Trzymasz się oparcia krzesła, mały zakres.','Dłonie na krześle, 1 s spięcia pośladka u góry.','Tułów pochylony ok. 45°, noga unoszona w linii z plecami.'],
+    steps:['Stań prosto przodem do krzesła i oprzyj na nim dłonie.','Przenieś ciężar na jedną nogę i lekko ugnij jej kolano.','Napnij pośladek i unieś drugą, prostą nogę do tyłu.','Powoli opuść ją, nie odkładając ciężaru, i powtórz. W połowie czasu zmień nogę.'],
+    tips:['Tułów nieruchomy – ruch tylko w biodrze.','Palce stopy skierowane w dół.','Spokojne, kontrolowane tempo.'],
+    mistakes:['Wyginanie lędźwi, żeby unieść nogę wyżej.','Bujanie tułowiem.','Zbyt duży zamach.'],
+    anim:{ anchor:'toe2', d:850, frames:[ { ...STAND, t:172, n:176, ua1:42, fa1:62, ua2:38, fa2:58, th1:2, sh1:2, th2:-2, sh2:-2 }, { ...STAND, t:170, n:174, ua1:44, fa1:64, ua2:40, fa2:60, th1:-38, sh1:-40, f1:30, th2:-2, sh2:-2 } ] } },
+
+  { id:'przysiad-sumo', cat:'posladki', name:'Przysiad sumo', muscles:'pośladki, wewnętrzna strona ud',
+    levels:['Płytki przysiad, możesz trzymać się krzesła.','Przysiad, aż uda będą prawie równoległe do podłogi.','Pauza 3 s na dole i wspięcie na palce po wyproście.'],
+    steps:['Stań w szerokim rozkroku, stopy skierowane lekko na zewnątrz.','Złącz dłonie przed klatką piersiową.','Z wdechem zegnij kolana i opuść biodra w dół, kierując kolana nad palce stóp.','Z wydechem wypchnij się w górę i ściśnij pośladki.'],
+    tips:['Kolana „rozpychaj” na zewnątrz.','Tułów jak najbardziej wyprostowany.','Ciężar na całych stopach.'],
+    mistakes:['Kolana schodzące do środka.','Odrywanie pięt.','Garbienie się.'],
+    anim:{ front:true, anchor:'feet', d:1000, frames:[ { ...CLASP, th1:24, sh1:22, th2:24, sh2:22 }, { ...CLASP, th1:70, sh1:8, th2:70, sh2:8 } ] } },
+
+  /* ---------------- NOGI ---------------- */
+  { id:'przysiad', cat:'nogi', name:'Przysiad', muscles:'uda, pośladki',
+    levels:['Przysiad do krzesła – dotykasz pośladkami siedziska i wstajesz.','Przysiad do momentu, gdy uda są równoległe do podłogi.','3 s opuszczania i 1 s pauzy na dole.'],
+    steps:['Stań w lekkim rozkroku (stopy na szerokość bioder lub odrobinę szerzej), palce lekko na zewnątrz.','Wyciągnij ręce przed siebie dla równowagi.','Z wdechem cofnij biodra do tyłu i w dół, jakbyś siadała na krześle.','Z wydechem wypchnij się z pięt do pozycji stojącej.'],
+    tips:['Kolana podążają w kierunku palców stóp.','Plecy proste, klatka piersiowa otwarta.','Ciężar na piętach i śródstopiu.'],
+    mistakes:['Odrywanie pięt od podłogi.','Kolana uciekające do środka.','Zaokrąglanie pleców.'],
+    anim:{ anchor:'toe1', d:1000, frames:[ { ...STAND, ua1:80, fa1:80, ua2:78, fa2:78, th1:2, sh1:2, th2:-1, sh2:-1 }, { ...STAND, t:145, n:152, ua1:90, fa1:90, ua2:88, fa2:88, th1:82, sh1:-28, th2:80, sh2:-30 } ] } },
+
+  { id:'wykrok-tyl', cat:'nogi', name:'Wykrok w tył', muscles:'uda, pośladki, równowaga',
+    levels:['Płytki wykrok z podparciem o ścianę lub krzesło.','Tylne kolano schodzi prawie do podłogi.','Wolne tempo i 1 s pauzy na dole.'],
+    steps:['Stań prosto, dłonie na biodrach.','Zrób duży krok jedną nogą do tyłu, stawiając ją na palcach.','Ugnij obie nogi, aż przednie udo będzie prawie równoległe do podłogi, a tylne kolano tuż nad matą.','Odepchnij się przednią piętą i wróć do postawy. Zmieniaj nogi.'],
+    tips:['Przednie kolano nad kostką.','Tułów pionowo.','Krok do tyłu jest łagodniejszy dla kolan niż do przodu.'],
+    mistakes:['Przednie kolano wychodzi daleko za palce.','Uderzanie kolanem o podłogę.','Pochylanie tułowia do przodu.'],
+    anim:{ anchor:'toe1', d:1000, frames:[ { ...STAND, ua1:12, fa1:14, ua2:-8, fa2:-6 }, { ua1:12, fa1:14, ua2:-8, fa2:-6, th1:76, sh1:-4, f1:90, th2:-14, sh2:-80, f2:10 } ] } },
+
+  { id:'wykrok-bok', cat:'nogi', name:'Wykrok w bok', muscles:'uda, pośladki, przywodziciele',
+    levels:['Mały zakres, możesz trzymać się krzesła.','Głęboki wykrok, biodra cofnięte jak w przysiadzie.','Płynne przejścia z boku na bok bez zatrzymania.'],
+    steps:['Stań w szerokim rozkroku, stopy równolegle.','Przenieś ciężar na jedną nogę, ugnij ją w kolanie i cofnij biodra.','Druga noga zostaje prosta, cała stopa na podłodze.','Odepchnij się zgiętą nogą, wróć na środek i zmień stronę.'],
+    tips:['Kolano zgiętej nogi nad palcami stopy.','Plecy proste, klatka do przodu.','Pięty na podłodze.'],
+    mistakes:['Zbyt wąski rozkrok.','Kolano uciekające do środka.','Garbienie się.'],
+    anim:(() => { const a = { ...CLASP, th1:27, sh1:27, th2:27, sh2:27 };
+      return { front:true, anchor:'feet', d:900, frames:[ a, { ...CLASP, th1:72, sh1:4, th2:50, sh2:50 }, a, { ...CLASP, th2:72, sh2:4, th1:50, sh1:50 } ] }; })() },
+
+  { id:'wspiecia', cat:'nogi', name:'Wspięcia na palce', muscles:'łydki, stabilizacja stóp',
+    levels:['Oburącz trzymasz się ściany lub krzesła.','Bez podparcia, 2 s w górze.','Na jednej nodze z lekkim podparciem.'],
+    steps:['Stań prosto, stopy na szerokość bioder, możesz lekko oprzeć dłonie o ścianę.','Napnij brzuch i pośladki.','Wznieś się na palce najwyżej, jak możesz.','Zatrzymaj się na chwilę i powoli opuść pięty.'],
+    tips:['Ciężar na dużym i drugim palcu, nie na zewnętrznej krawędzi stopy.','Opuszczaj wolniej, niż się wznosisz.','Kolana proste, ale nie zablokowane.'],
+    mistakes:['Szybkie podskakiwanie.','Przechylanie stóp na zewnątrz.','Pochylanie się do przodu.'],
+    anim:{ anchor:'toe1', d:800, h:350, frames:[ { ...STAND, ua1:70, fa1:85, ua2:68, fa2:83 }, { ua1:70, fa1:85, ua2:68, fa2:83, f1:32, f2:32 } ] } },
+
+  { id:'krzeselko', cat:'nogi', name:'Krzesełko przy ścianie', muscles:'przód uda, pośladki',
+    levels:['Płytkie zejście (kąt w kolanach ok. 120°), 15–20 s.','Uda prawie równoległe do podłogi, 20–30 s.','Uda równoległe, ręce wyciągnięte przed siebie, 40 s.'],
+    steps:['Oprzyj plecy o ścianę, stopy ok. pół metra od niej.','Zsuwaj się plecami po ścianie, uginając kolana.','Zatrzymaj się, gdy uda są prawie równoległe do podłogi, a kolana nad kostkami.','Oddychaj spokojnie i wytrzymaj zadany czas, potem wsuń się w górę.'],
+    tips:['Całe plecy przylegają do ściany.','Ciężar na piętach.','Pieczenie ud jest OK, ból kolan – nie. Wtedy zejdź płycej.'],
+    mistakes:['Kolana wysunięte przed palce.','Opieranie dłoni o uda.','Wstrzymywanie oddechu.'],
+    anim:{ anchor:'hip', props:['wall'], d:1600, h:0, frames:[ { ...STAND, th1:90, sh1:0, th2:88, sh2:-2, ua1:4, fa1:10, ua2:2, fa2:8 }, { ...STAND, n:176, th1:91, sh1:0, th2:89, sh2:-2, ua1:4, fa1:12, ua2:2, fa2:10 } ] } },
+
+  /* ---------------- RAMIONA I PLECY ---------------- */
+  { id:'pompki', cat:'gora', name:'Pompki', muscles:'klatka piersiowa, ramiona, barki',
+    levels:['Pompki przy ścianie lub z dłońmi opartymi o stół.','Pompki na kolanach (jak na animacji).','Klasyczne pompki na palcach stóp.'],
+    steps:['Ustaw dłonie nieco szerzej niż barki, palce skierowane do przodu.','Oprzyj się na kolanach (lub palcach stóp) – ciało prosto od kolan do głowy.','Z wdechem uginaj łokcie, prowadząc je skośnie do tyłu, aż klatka zbliży się do podłogi.','Z wydechem wypchnij się do góry.'],
+    tips:['Napięty brzuch i pośladki – ciało jak deska.','Łokcie pod kątem ok. 45° do tułowia, nie na boki.','Lepiej mniejszy zakres niż zła technika.'],
+    mistakes:['Opadające biodra.','Łokcie rozstawione szeroko na boki.','Głowa zwisająca w dół.'],
+    anim:{ anchor:'knee1', mat:true, d:1000, frames:[ { t:123, n:120, ua1:0, fa1:0, ua2:3, fa2:3, th1:-57, sh1:-118, f1:-118, th2:-58, sh2:-121, f2:-121 }, { t:103, n:100, ua1:-100, fa1:0, ua2:-97, fa2:3, th1:-77, sh1:-108, f1:-108, th2:-78, sh2:-111, f2:-111 } ] } },
+
+  { id:'dipy', cat:'gora', name:'Pompki tyłem na krześle (dipy)', muscles:'tył ramion (triceps), barki',
+    levels:['Nogi mocno ugięte, stopy blisko krzesła, mały zakres.','Kolana pod kątem prostym, łokcie zginane do ok. 90°.','Nogi wyprostowane, oparte na piętach.'],
+    steps:['Usiądź na brzegu stabilnego krzesła (oprzyj je o ścianę), dłonie na krawędzi obok bioder, palce do przodu.','Przesuń pośladki przed krzesło, stopy na podłodze.','Z wdechem uginaj łokcie, opuszczając biodra w dół – łokcie kierują się do tyłu.','Z wydechem wyprostuj ręce i wróć w górę.'],
+    tips:['Plecy blisko krzesła.','Barki nisko, z dala od uszu.','Krzesło musi stać pewnie – najlepiej oparte o ścianę.'],
+    mistakes:['Rozchodzenie się łokci na boki.','Zbyt głębokie zejście (ból barku).','Pchanie nogami zamiast rękami.'],
+    anim:{ fix:'hand1', props:['chair'], d:1000, frames:[ { t:180, n:180, ua1:-10, fa1:-10, ua2:-8, fa2:-8, th1:85, sh1:0, f1:90, th2:83, sh2:-2, f2:90 }, { t:180, n:180, ua1:-60, fa1:15, ua2:-58, fa2:17, th1:102, sh1:-9, f1:90, th2:100, sh2:-11, f2:90 } ] } },
+
+  { id:'ptak-pies', cat:'gora', name:'Ptak-pies', muscles:'mięśnie grzbietu, pośladki, brzuch',
+    levels:['Na zmianę unosisz tylko rękę albo tylko nogę.','Jednocześnie przeciwna ręka i noga.','3 s zatrzymania w wyproście, potem łokieć do kolana pod brzuchem.'],
+    steps:['Uklęknij w podporze: dłonie pod barkami, kolana pod biodrami.','Napnij brzuch i ustaw plecy prosto.','Z wydechem wyciągnij jednocześnie jedną rękę do przodu i przeciwną nogę do tyłu, do linii pleców.','Zatrzymaj się na chwilę, wróć i zmień strony.'],
+    tips:['Wyobraź sobie szklankę wody na krzyżu – nie może się wylać.','Sięgaj daleko, a nie wysoko.','Patrz w podłogę.'],
+    mistakes:['Unoszenie nogi za wysoko i wyginanie lędźwi.','Przechylanie bioder na bok.','Pośpiech.'],
+    anim:{ anchor:'hip', mat:true, d:1000, h:450, frames:[ FOURS, { ...FOURS, ua1:96, fa1:96, th2:-88, sh2:-88, f2:-88 }, FOURS, { ...FOURS, ua2:96, fa2:96, th1:-88, sh1:-88, f1:-88 } ] } },
+
+  { id:'superman', cat:'gora', name:'Superman', muscles:'mięśnie grzbietu, pośladki',
+    levels:['Na zmianę unosisz tylko ręce albo tylko nogi.','Jednocześnie ręce i nogi, 2 s w górze.','Utrzymanie 5 s i „pływanie” rękami.'],
+    steps:['Połóż się na brzuchu, ręce wyciągnięte przed siebie, nogi proste.','Czoło nad matą, wzrok w podłogę.','Z wydechem unieś jednocześnie ręce, klatkę piersiową i nogi kilka centymetrów nad podłogę.','Zatrzymaj się na chwilę i powoli opuść.'],
+    tips:['Ruch jest niewielki – liczy się kontrola, nie wysokość.','Napinaj pośladki.','Szyja przedłuża kręgosłup.'],
+    mistakes:['Zadzieranie głowy.','Szarpanie w górę.','Zbyt wysokie unoszenie, które boli w lędźwiach.'],
+    anim:{ anchor:'hip', mat:true, d:1000, h:450, frames:[ { t:90, n:84, ua1:96, fa1:96, ua2:94, fa2:94, th1:-90, sh1:-90, f1:-90, th2:-90, sh2:-90, f2:-90 }, { t:101, n:96, ua1:110, fa1:112, ua2:108, fa2:110, th1:-101, sh1:-103, f1:-103, th2:-100, sh2:-102, f2:-102 } ] } },
+
+  { id:'krazenia-ramion', cat:'gora', name:'Krążenia ramion', muscles:'barki, górna część pleców',
+    levels:['Małe kółka, ręce lekko poniżej barków.','Ręce na wysokości barków, kółka w przód i w tył.','Większe kółka i wolne tempo, bez opuszczania rąk.'],
+    steps:['Stań prosto, stopy na szerokość bioder.','Unieś proste ręce w bok do wysokości barków.','Zataczaj małe, kontrolowane kółka do przodu.','W połowie czasu zmień kierunek na kółka do tyłu.'],
+    tips:['Barki nisko, z dala od uszu.','Brzuch napięty, nie odchylaj się do tyłu.','Ruch wychodzi z barku, nie z nadgarstka.'],
+    mistakes:['Unoszenie barków do uszu.','Szybkie, zamaszyste wymachy.','Opuszczanie rąk bez przerwy przy zmęczeniu.'],
+    anim:{ front:true, anchor:'feet', d:260, h:0, frames:[ { ua1:84, fa1:82, ua2:84, fa2:82 }, { ua1:90, fa1:96, ua2:90, fa2:96 }, { ua1:97, fa1:99, ua2:97, fa2:99 }, { ua1:92, fa1:86, ua2:92, fa2:86 } ] } },
+
+  /* ---------------- CAŁE CIAŁO ---------------- */
+  { id:'pajacyki', cat:'cale', name:'Pajacyki', muscles:'całe ciało, kondycja',
+    levels:['Bez skoku – na zmianę krok w bok i uniesienie rąk.','Klasyczne pajacyki w spokojnym tempie.','Szybsze tempo i pełny zakres rąk.'],
+    steps:['Stań prosto, stopy razem, ręce wzdłuż ciała.','Podskocz, rozstawiając nogi szerzej niż biodra i unosząc ręce bokiem nad głowę.','Podskocz ponownie, wracając do pozycji wyjściowej.','Utrzymuj równy rytm i oddychaj.'],
+    tips:['Ląduj miękko na śródstopiu, z lekko ugiętymi kolanami.','Mieszkasz w bloku? Wybierz wersję bez skoku.','Brzuch napięty.'],
+    mistakes:['Lądowanie na piętach z prostymi kolanami.','Garbienie się.','Wstrzymywanie oddechu.'],
+    anim:{ front:true, anchor:'hip', d:380, h:80, frames:[ { th1:4, sh1:4, th2:4, sh2:4, ua1:8, fa1:6, ua2:8, fa2:6 }, { th1:20, sh1:20, th2:20, sh2:20, ua1:164, fa1:172, ua2:164, fa2:172 } ] } },
+
+  { id:'wspinaczka', cat:'cale', name:'Wspinaczka', muscles:'brzuch, barki, kondycja',
+    levels:['Dłonie na stole lub krześle, spokojne przyciąganie kolan.','Na podłodze, naprzemienne kolana w umiarkowanym tempie.','Szybkie tempo, biodra nisko.'],
+    steps:['Ustaw się w podporze na prostych rękach, dłonie pod barkami.','Ciało w jednej linii, brzuch napięty.','Przyciągnij jedno kolano w stronę klatki, potem odstaw nogę do tyłu.','Zmieniaj nogi rytmicznie, jakbyś biegła w miejscu.'],
+    tips:['Barki nad dłońmi przez cały czas.','Biodra na wysokości barków.','Zacznij wolno – przyspieszaj, gdy technika jest pewna.'],
+    mistakes:['Pupa wysoko w górze.','Barki uciekające za dłonie.','Tempo kosztem techniki.'],
+    anim:{ anchor:'hand1', mat:true, d:420, h:60, frames:[ { ...HPLANK, th1:52, sh1:-42 }, { ...HPLANK, th2:52, sh2:-42 } ] } },
+
+  { id:'burpees', cat:'cale', name:'Burpees (uproszczone)', muscles:'całe ciało, kondycja',
+    levels:['Dłonie na krześle, nogi odstawiasz do tyłu krokiem – bez skoku.','Dłonie na podłodze, nogi krokiem lub skokiem do podporu, powrót i wstanie.','Pełne burpees z wyskokiem na końcu.'],
+    steps:['Stań w lekkim rozkroku.','Zrób przysiad i połóż dłonie na podłodze przed stopami.','Odstaw nogi do tyłu (krokiem lub skokiem) do podporu na prostych rękach.','Wróć nogami do dłoni, wstań i wyciągnij ręce w górę.'],
+    tips:['Dopasuj tempo do oddechu – to ćwiczenie mocno męczy.','W podporze trzymaj napięty brzuch.','Kroki zamiast skoków chronią kolana (i sąsiadów).'],
+    mistakes:['Opadające biodra w podporze.','Lądowanie na prostych nogach.','Okrągłe plecy przy schodzeniu w dół.'],
+    anim:(() => { const sq = { t:102, n:110, ua1:12, fa1:8, ua2:14, fa2:10, th1:70, sh1:-36, th2:68, sh2:-38, f1:90, f2:90 };
+      return { anchor:'hand1', d:650, h:200, frames:[ { ...STAND, ua1:4, fa1:6, ua2:2, fa2:4 }, sq, HPLANK, sq, { ...STAND, ua1:174, fa1:178, ua2:172, fa2:176 } ] }; })() },
+
+  { id:'wysokie-kolana', cat:'cale', name:'Wysokie kolana', muscles:'nogi, brzuch, kondycja',
+    levels:['Marsz w miejscu z unoszeniem kolan do wysokości bioder.','Lekki trucht w miejscu z wysokimi kolanami.','Szybki bieg w miejscu i aktywna praca rąk.'],
+    steps:['Stań prosto, ręce ugięte w łokciach.','Unieś jedno kolano do wysokości bioder.','Opuść nogę i od razu unieś drugie kolano.','Pracuj rękami jak przy bieganiu, w swoim rytmie.'],
+    tips:['Ląduj na śródstopiu.','Tułów wyprostowany, brzuch napięty.','Na początek wystarczy marsz – tętno i tak rośnie.'],
+    mistakes:['Odchylanie tułowia do tyłu.','Ciężkie lądowanie na piętach.','Garbienie się.'],
+    anim:{ anchor:'hip', d:420, h:40, frames:[ { th1:86, sh1:2, f1:50, th2:0, sh2:0, f2:90, ua1:-38, fa1:40, ua2:38, fa2:135 }, { th2:86, sh2:2, f2:50, th1:0, sh1:0, f1:90, ua2:-38, fa2:40, ua1:38, fa1:135 } ] } },
+
+  { id:'przysiad-wyskok', cat:'cale', name:'Przysiad z wyskokiem', muscles:'nogi, pośladki, moc',
+    levels:['Przysiad zakończony wspięciem na palce (bez skoku).','Przysiad i niski wyskok z miękkim lądowaniem.','Głęboki przysiad i dynamiczny wyskok z wymachem rąk.'],
+    steps:['Stań w lekkim rozkroku.','Zrób przysiad, cofając biodra, ręce za sobą.','Dynamicznie wyprostuj nogi i wyskocz w górę, wymachując rękami.','Wyląduj miękko na śródstopiu i od razu przejdź do kolejnego przysiadu.'],
+    tips:['Lądowanie ciche jak kot – ugięte kolana.','Kolana w linii stóp.','Jeśli nie możesz skakać, wybierz poziom łatwy.'],
+    mistakes:['Lądowanie na prostych nogach.','Kolana do środka przy lądowaniu.','Brak kontroli tułowia.'],
+    anim:{ anchor:'toe1', d:550, h:120, frames:[ { ...STAND, ua1:4, fa1:6, ua2:2, fa2:4 }, { ...STAND, t:145, n:152, th1:82, sh1:-28, th2:80, sh2:-30, ua1:-40, fa1:-38, ua2:-42, fa2:-40 }, { t:180, n:182, th1:2, sh1:2, f1:30, th2:-2, sh2:-2, f2:30, ua1:168, fa1:174, ua2:166, fa2:172, y:30 } ] } },
+
+  /* ---------------- ROZCIĄGANIE ---------------- */
+  { id:'koci-grzbiet', cat:'stretch', name:'Koci grzbiet', muscles:'kręgosłup, plecy',
+    levels:['Mały zakres i 3 spokojne oddechy w każdej pozycji.','Pełny zakres ruchu zsynchronizowany z oddechem.','Między powtórzeniami dodaj krążenia bioder w podporze.'],
+    steps:['Uklęknij w podporze: dłonie pod barkami, kolana pod biodrami.','Z wdechem opuść brzuch, unieś mostek i wzrok lekko w górę („krowa”).','Z wydechem zaokrąglij plecy w górę, broda w stronę mostka („kot”).','Płynnie przechodź między pozycjami w rytmie oddechu.'],
+    tips:['Ruch zaczynaj od miednicy.','Ręce proste, łokcie nie zablokowane.','Ma być przyjemnie – nie forsuj.'],
+    mistakes:['Ruch tylko szyją.','Zbyt szybkie tempo.','Wstrzymywanie oddechu.'],
+    anim:{ anchor:'hand1', mat:true, d:1500, h:300, frames:[ { ...FOURS, c:-15, n:134 }, { ...FOURS, c:17, n:38 } ] } },
+
+  { id:'pozycja-dziecka', cat:'stretch', name:'Pozycja dziecka', muscles:'plecy, biodra, barki',
+    levels:['Kolana szeroko, poduszka pod pośladki lub czoło.','Klasyczna pozycja z rękami wyciągniętymi przed siebie.','Przesuwaj dłonie w bok, rozciągając boki tułowia.'],
+    steps:['Uklęknij, zetknij duże palce stóp, kolana rozsuń na szerokość maty.','Usiądź pośladkami na piętach.','Z wydechem połóż tułów między udami i wyciągnij ręce przed siebie.','Oprzyj czoło o matę i spokojnie oddychaj.'],
+    tips:['Z każdym wydechem pozwól ciału opaść niżej.','Jeśli bolą kolana, podłóż zwinięty koc.','Oddychaj „w plecy”.'],
+    mistakes:['Napinanie barków.','Wstrzymywanie oddechu.','Forsowanie pozycji mimo bólu kolan.'],
+    anim:{ anchor:'knee1', mat:true, d:1800, h:200, frames:[ { t:64, n:80, c:6, th1:48, sh1:-90, f1:-90, th2:46, sh2:-92, f2:-92, ua1:86, fa1:90, ua2:84, fa2:88 }, { t:61, n:78, c:8, th1:48, sh1:-90, f1:-90, th2:46, sh2:-92, f2:-92, ua1:84, fa1:90, ua2:82, fa2:88 } ] } },
+
+  { id:'sklon-przod', cat:'stretch', name:'Skłon w przód (tył uda)', muscles:'tył uda, łydki, plecy',
+    levels:['Kolana lekko ugięte, dłonie na udach.','Proste nogi, dłonie zjeżdżają do kolan lub piszczeli.','Dłonie do kostek lub podłogi, 30 s spokojnego oddechu.'],
+    steps:['Stań prosto, stopy na szerokość bioder.','Z wydechem pochyl tułów do przodu z prostymi plecami, zginając się w biodrach.','Pozwól rękom swobodnie zwisać w kierunku podłogi.','Zatrzymaj się tam, gdzie czujesz przyjemne rozciąganie z tyłu ud, i oddychaj.'],
+    tips:['Jeśli ciągnie w lędźwiach – ugnij kolana.','Rozluźnij szyję.','Wracaj powoli, kręg po kręgu.'],
+    mistakes:['Sprężynowanie (odbijanie) w dół.','Zablokowane, przeprostowane kolana.','Wstrzymywanie oddechu.'],
+    anim:{ anchor:'toe1', d:1600, h:900, frames:[ { ...STAND }, { ...STAND, t:56, n:30, c:5, ua1:2, fa1:2, ua2:0, fa2:0, th1:-4, sh1:-2, th2:-6, sh2:-4 } ] } },
+
+  { id:'przod-uda', cat:'stretch', name:'Rozciąganie przodu uda', muscles:'przód uda, biodro',
+    levels:['Trzymasz się ściany, pięta tylko w stronę pośladka.','Pięta przy pośladku, kolana obok siebie.','Bez podparcia, z lekkim podwinięciem miednicy.'],
+    steps:['Stań prosto, jedną ręką przytrzymaj się ściany lub krzesła.','Ugnij jedną nogę i chwyć dłonią stopę za sobą.','Przyciągnij piętę do pośladka, kolana trzymaj blisko siebie.','Lekko podwiń miednicę i trzymaj 20–30 s, potem zmień nogę.'],
+    tips:['Kolano zgiętej nogi skierowane w dół.','Tułów wyprostowany.','Rozciąganie ma być odczuwalne, ale nie bolesne.'],
+    mistakes:['Wyginanie lędźwi.','Odsuwanie kolana do tyłu lub na bok.','Pochylanie tułowia.'],
+    anim:{ anchor:'toe2', d:1300, h:900, frames:[ { ...STAND, ua2:70, fa2:80 }, { ...STAND, t:178, th1:-6, sh1:-170, f1:-100, ua1:-13, fa1:-13, ua2:78, fa2:84 } ] } },
+
+  { id:'sklon-boczny', cat:'stretch', name:'Skłon boczny', muscles:'boki tułowia, plecy',
+    levels:['Dłonie na biodrach, mały skłon.','Jedna ręka nad głową, druga zsuwa się po udzie.','Obie ręce nad głową, 20 s w każdą stronę.'],
+    steps:['Stań w lekkim rozkroku, brzuch napięty.','Unieś jedną rękę nad głowę, drugą połóż wzdłuż uda.','Z wydechem przechyl się w bok, sięgając ręką nad głową w przeciwną stronę.','Zatrzymaj się na kilka oddechów, wróć i zmień stronę.'],
+    tips:['Ruch tylko w bok – nie pochylaj się w przód ani w tył.','Biodra stabilne.','Wydłużaj bok, zamiast się „zwijać”.'],
+    mistakes:['Skręcanie tułowia.','Wypychanie bioder.','Zbyt głęboki skłon.'],
+    anim:(() => { const L = { th1:10, sh1:10, th2:10, sh2:10 };
+      const a = { ...L, ua1:6, fa1:6, ua2:180, fa2:180 }, b = { ...L, ua2:6, fa2:6, ua1:180, fa1:180 };
+      return { front:true, anchor:'feet', d:1200, h:600, frames:[ a, { ...a, t:162, n:158, ua1:12, fa1:12, ua2:204, fa2:212 }, a, b, { ...b, t:198, n:202, ua2:12, fa2:12, ua1:204, fa1:212 }, b ] }; })() },
+
+  { id:'wykrok-kleczny', cat:'stretch', name:'Wykrok w klęku (przód biodra)', muscles:'zginacze bioder, przód uda',
+    levels:['Poduszka pod kolanem, niewielkie przesunięcie bioder.','Biodra wysunięte do przodu, tułów prosto.','Dodatkowo unieś rękę po stronie tylnej nogi nad głowę.'],
+    steps:['Uklęknij na jednym kolanie, drugą stopę postaw przed sobą – kolano nad kostką.','Dłonie oprzyj na przednim udzie, wyprostuj tułów.','Napnij pośladek tylnej nogi i powoli przesuń biodra do przodu.','Poczuj rozciąganie z przodu biodra tylnej nogi; trzymaj 20–30 s i zmień stronę.'],
+    tips:['Lekko podwiń miednicę.','Nie wyginaj lędźwi.','Pod kolano połóż złożony ręcznik.'],
+    mistakes:['Przednie kolano daleko przed stopą.','Pochylanie tułowia.','Przeprost w lędźwiach.'],
+    anim:{ anchor:'knee2', mat:true, d:1500, h:700, frames:[ { t:180, n:180, th1:88, sh1:0, f1:90, th2:-10, sh2:-90, f2:-90, ua1:34, fa1:72, ua2:32, fa2:70 }, { t:182, n:182, th1:95, sh1:-12, f1:90, th2:-28, sh2:-90, f2:-90, ua1:40, fa1:80, ua2:38, fa2:78 } ] } }
+];
+const EX_BY_ID = Object.fromEntries(EXERCISES.map(e => [e.id, e]));
+const catName = id => (CATS.find(c => c.id === id) || {}).name || '';
+
+/* =========================================================
    WIDOKI
    ========================================================= */
+let exCat = 'all';
+const levelSel = {};
+actions.cat = el => { exCat = el.dataset.cat; render(); };
+actions.level = el => { levelSel[el.dataset.ex] = +el.dataset.lvl; renderLevels(el.dataset.ex); };
+function renderLevels(id) {
+  const ex = EX_BY_ID[id], l = levelSel[id] || 0;
+  document.querySelectorAll('[data-act="level"]').forEach(b => b.classList.toggle('on', +b.dataset.lvl === l));
+  $('#lvlText').textContent = ex.levels[l];
+}
+const LEVEL_NAMES = ['Łatwy', 'Średni', 'Trudny'];
 const views = {
   today() {
     const d = new Date();
@@ -117,7 +559,38 @@ const views = {
       </div>
       <div class="empty">Etap 1 – szkielet aplikacji gotowy.</div>` };
   },
-  exercises() { return { title: 'Ćwiczenia', html: `<div class="empty">Baza ćwiczeń – etap 2.</div>` }; },
+  exercises() {
+    const list = EXERCISES.filter(e => exCat === 'all' || e.cat === exCat);
+    return { title: 'Ćwiczenia', keepScroll: false, html: `
+      <div class="chips">
+        <button class="chip ${exCat === 'all' ? 'on' : ''}" data-act="cat" data-cat="all">Wszystkie (${EXERCISES.length})</button>
+        ${CATS.map(c => `<button class="chip ${exCat === c.id ? 'on' : ''}" data-act="cat" data-cat="${c.id}">${esc(c.name)}</button>`).join('')}
+      </div>
+      <div class="exgrid">
+        ${list.map(e => `<button class="excard" data-go="#/exercise/${e.id}">
+          ${figureSVG(e, { frame: 1, cls: 'thumb' })}
+          <span class="exname">${esc(e.name)}</span>
+          <span class="muted small">${esc(catName(e.cat))}</span>
+        </button>`).join('')}
+      </div>` };
+  },
+  exercise(id) {
+    const ex = EX_BY_ID[id];
+    if (!ex) return views.exercises();
+    const l = levelSel[id] || 0;
+    return { title: ex.name, html: `
+      <div class="card figcard">${figureSVG(ex, { animate: true, cls: 'big' })}</div>
+      <p><span class="tag">${esc(catName(ex.cat))}</span> <span class="muted small">Pracują: ${esc(ex.muscles)}</span></p>
+      <h2>Poziom trudności</h2>
+      <div class="row">${LEVEL_NAMES.map((n, i) => `<button class="chip ${i === l ? 'on' : ''}" data-act="level" data-ex="${id}" data-lvl="${i}">${i + 1}. ${n}</button>`).join('')}</div>
+      <div class="card" id="lvlText">${esc(ex.levels[l])}</div>
+      <h2>Jak wykonać</h2>
+      <ol class="steps">${ex.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+      <h2>Wskazówki</h2>
+      <ul class="good">${ex.tips.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+      <h2>Najczęstsze błędy</h2>
+      <ul class="bad">${ex.mistakes.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` };
+  },
   workouts() { return { title: 'Treningi', html: `<div class="empty">Gotowe treningi z timerem – etap 3.</div>` }; },
   plan() { return { title: 'Plan 8 tygodni', html: `<div class="empty">Plan tygodniowy – etap 4.</div>` }; },
   log() { return { title: 'Dziennik', html: `<div class="empty">Dziennik i kalendarz – etap 5.</div>` }; }
@@ -139,12 +612,12 @@ function render() {
   $('#backBtn').hidden = !PARENT[name];
   $('#backBtn').dataset.go = PARENT[name] || '';
   document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === TAB_OF[name]));
+  mountFigures($('#view'));
   if (out.after) out.after();
   if (!out.keepScroll) window.scrollTo(0, 0);
 }
 
 // Delegacja kliknięć: data-go="#/..." przechodzi do widoku, data-act="nazwa" wywołuje akcję
-const actions = {};
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-go],[data-act],[data-tab]');
   if (!el) return;
