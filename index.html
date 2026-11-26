@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5ede2">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mój Trening">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<title>Mój Trening</title>
+<style>
+:root{
+  --bg:#f5ede2; --card:#fffaf3; --beige:#ecdfcd; --beige2:#dcc6a8;
+  --brown:#7b5235; --brown-d:#4b3020; --caramel:#b9814f; --text:#3a281b;
+  --muted:#8a715c; --ok:#6f8b4a; --line:#e4d5c1; --r:18px;
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:17px;line-height:1.45;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+button{font:inherit;color:inherit;cursor:pointer}
+h1,h2,h3{margin:0;line-height:1.2}
+h2{font-size:21px;margin:22px 0 10px}
+h3{font-size:18px}
+p{margin:6px 0}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+
+/* Pasek górny */
+.topbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + var(--safe-t)) 12px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.topbar h1{font-size:22px;color:var(--brown-d);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back{width:48px;height:48px;border:0;border-radius:14px;background:var(--beige);font-size:28px;line-height:1;color:var(--brown-d);display:flex;align-items:center;justify-content:center}
+.back[hidden]{display:none}
+
+main{padding:12px 16px calc(100px + var(--safe-b));max-width:680px;margin:0 auto}
+
+/* Dolne menu */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(5,1fr);background:var(--card);border-top:1px solid var(--line);padding-bottom:var(--safe-b);box-shadow:0 -4px 16px rgba(75,48,32,.06)}
+.tabbar button{border:0;background:none;min-height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;color:var(--muted)}
+.tabbar svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tabbar button.on{color:var(--brown-d);font-weight:600}
+.tabbar button.on svg{stroke:var(--brown)}
+
+/* Karty i przyciski */
+.card{background:var(--card);border-radius:var(--r);padding:16px;margin:12px 0;box-shadow:0 2px 10px rgba(75,48,32,.06);border:1px solid var(--line)}
+.card.tap{display:block;width:100%;text-align:left;border:1px solid var(--line)}
+.card.tap:active{transform:scale(.99);background:#fbf3e8}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:58px;border:0;border-radius:16px;background:var(--brown);color:#fff;font-size:18px;font-weight:600;padding:12px 18px;margin:10px 0;text-decoration:none}
+.btn:active{background:var(--brown-d)}
+.btn.sec{background:var(--beige);color:var(--brown-d)}
+.btn.sec:active{background:var(--beige2)}
+.btn.ok{background:var(--ok)}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.chip{border:1px solid var(--beige2);background:var(--card);border-radius:999px;padding:10px 16px;min-height:44px;font-size:15px;color:var(--brown-d)}
+.chip.on{background:var(--brown);border-color:var(--brown);color:#fff}
+.tag{display:inline-block;background:var(--beige);color:var(--brown-d);border-radius:999px;padding:3px 10px;font-size:13px;margin:2px 4px 2px 0}
+.hero{background:linear-gradient(135deg,#8a5d3d,#b9814f);color:#fff;border:0}
+.hero .muted{color:#f5e6d3}
+.empty{text-align:center;color:var(--muted);padding:30px 10px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="back" id="backBtn" hidden aria-label="Wstecz">‹</button>
+  <h1 id="title">Mój Trening</h1>
+</header>
+
+<main id="view"></main>
+
+<nav class="tabbar" id="tabbar">
+  <button data-tab="today"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Dziś</button>
+  <button data-tab="exercises"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v7M7 10l5-2 5 2M9 21l3-7 3 7"/></svg>Ćwiczenia</button>
+  <button data-tab="workouts"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>Treningi</button>
+  <button data-tab="plan"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Plan</button>
+  <button data-tab="log"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11M9 8h6"/></svg>Dziennik</button>
+</nav>
+
+<script>
+'use strict';
+/* =========================================================
+   POMOCNICZE
+   ========================================================= */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseYmd = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const DNI = ['niedziela','poniedziałek','wtorek','środa','czwartek','piątek','sobota'];
+const DNI_KR = ['Nd','Pn','Wt','Śr','Cz','Pt','So'];
+const MIESIACE = ['styczeń','luty','marzec','kwiecień','maj','czerwiec','lipiec','sierpień','wrzesień','październik','listopad','grudzień'];
+const MIESIACE_D = ['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
+const fmtDate = d => `${d.getDate()} ${MIESIACE_D[d.getMonth()]}`;
+
+const store = {
+  get(k, def) { try { const v = localStorage.getItem('mt_' + k); return v === null ? def : JSON.parse(v); } catch (e) { return def; } },
+  set(k, v) { try { localStorage.setItem('mt_' + k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* =========================================================
+   WIDOKI
+   ========================================================= */
+const views = {
+  today() {
+    const d = new Date();
+    return { title: 'Dziś', html: `
+      <div class="card hero">
+        <div class="muted small">${esc(DNI[d.getDay()])}, ${esc(fmtDate(d))}</div>
+        <h2 style="margin:6px 0 4px">Cześć! 👋</h2>
+        <p>Tu pojawi się Twój trening na dziś.</p>
+      </div>
+      <div class="empty">Etap 1 – szkielet aplikacji gotowy.</div>` };
+  },
+  exercises() { return { title: 'Ćwiczenia', html: `<div class="empty">Baza ćwiczeń – etap 2.</div>` }; },
+  workouts() { return { title: 'Treningi', html: `<div class="empty">Gotowe treningi z timerem – etap 3.</div>` }; },
+  plan() { return { title: 'Plan 8 tygodni', html: `<div class="empty">Plan tygodniowy – etap 4.</div>` }; },
+  log() { return { title: 'Dziennik', html: `<div class="empty">Dziennik i kalendarz – etap 5.</div>` }; }
+};
+
+/* =========================================================
+   ROUTER
+   ========================================================= */
+const TAB_OF = { today:'today', exercises:'exercises', exercise:'exercises', workouts:'workouts', workout:'workouts', plan:'plan', log:'log' };
+const PARENT = { exercise:'#/exercises', workout:'#/workouts' };
+
+function render() {
+  const parts = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
+  let name = parts[0] || 'today';
+  if (!views[name]) name = 'today';
+  const out = views[name](...parts.slice(1));
+  $('#title').textContent = out.title;
+  $('#view').innerHTML = out.html;
+  $('#backBtn').hidden = !PARENT[name];
+  $('#backBtn').dataset.go = PARENT[name] || '';
+  document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === TAB_OF[name]));
+  if (out.after) out.after();
+  if (!out.keepScroll) window.scrollTo(0, 0);
+}
+
+// Delegacja kliknięć: data-go="#/..." przechodzi do widoku, data-act="nazwa" wywołuje akcję
+const actions = {};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-go],[data-act],[data-tab]');
+  if (!el) return;
+  if (el.dataset.tab) { location.hash = '#/' + el.dataset.tab; return; }
+  if (el.dataset.go) { location.hash = el.dataset.go; return; }
+  const fn = actions[el.dataset.act];
+  if (fn) fn(el, e);
+});
+
+window.addEventListener('hashchange', render);
+render();
+
+/* =========================================================
+   PWA – service worker (działa tylko przez https / localhost)
+   ========================================================= */
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
