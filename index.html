@@ -109,6 +109,39 @@ main{padding:12px 16px calc(100px + var(--safe-b));max-width:680px;margin:0 auto
 .segs li:last-child{border:0}
 .segs li.work b{color:var(--brown)}
 
+/* Dziennik */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column}
+.stat b{font-size:26px;color:var(--brown-d);line-height:1.15}
+.stat span{font-size:14px;color:var(--muted)}
+.stat.fire{background:#fbeedd;border-color:#ecd1ad}
+.cal{padding:12px}
+.cal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:18px}
+.cal-nav{width:48px;height:44px;border:0;border-radius:12px;background:var(--beige);font-size:24px;color:var(--brown-d)}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-w{text-align:center;font-size:12px;color:var(--muted);padding:2px 0}
+.cal-d{aspect-ratio:1/1.05;border:0;border-radius:12px;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0;font-size:16px;color:var(--text);position:relative}
+.cal-d.out{opacity:.35}
+.cal-d.plan span{box-shadow:inset 0 0 0 1.5px var(--beige2);border-radius:50%}
+.cal-d span{width:30px;height:30px;display:flex;align-items:center;justify-content:center}
+.cal-d.has{background:#f3e3cf}
+.cal-d.has span{font-weight:700;color:var(--brown-d)}
+.cal-d.missed span{color:#b98a75}
+.cal-d.now{outline:2px solid var(--caramel);outline-offset:-2px}
+.cal-d.sel{background:var(--brown)!important}
+.cal-d.sel span{color:#fff!important;box-shadow:none}
+.cal-d i{display:flex;gap:2px;height:7px}
+.cal-d i b,.legend b{width:7px;height:7px;border-radius:50%;display:inline-block}
+.k-silowy{background:var(--brown)}.k-bieznia{background:var(--caramel)}.k-rozciaganie{background:var(--ok)}.k-rozgrzewka{background:#d49a5a}
+.cal-d.sel i b{box-shadow:0 0 0 1.5px #fff}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:10px}
+.legend span{display:flex;align-items:center;gap:5px}
+.lg-plan{width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--beige2);display:inline-block}
+.card.entry{display:flex;gap:12px;align-items:center;padding:10px 12px}
+.del{width:44px;height:44px;border:0;border-radius:12px;background:#f6e5dd;color:#a4553a;font-size:16px;flex:none}
+details.add summary{cursor:pointer;min-height:32px;display:flex;align-items:center;color:var(--brown-d);list-style:none}
+details.add summary::-webkit-details-marker{display:none}
+
 /* Odtwarzacz */
 body.playing{overflow:hidden}
 #player{position:fixed;inset:0;z-index:50;background:var(--bg);overflow-y:auto;transition:background .3s}
@@ -873,6 +906,88 @@ function updateTimer() {
 const logAll = () => store.get('log', []);
 function logAdd(entry) { const l = logAll(); l.push({ ...entry, ts: Date.now() }); store.set('log', l); }
 
+// Seria: kolejne dni treningowe z planu (pn, wt, śr, pt, sob) z zapisanym treningiem.
+// Dni odpoczynku nie przerywają serii; dodatkowy trening w dzień wolny ją wydłuża.
+// Dzisiejszy, jeszcze niezrobiony trening też jej nie przerywa.
+function streakInfo() {
+  const days = new Set(logAll().map(e => e.date));
+  if (!days.size) return { current: 0, best: 0 };
+  const today = parseYmd(ymd(new Date()));
+  const isTraining = d => planDay(d).kind !== 'odpoczynek';
+  let current = 0, d = today;
+  if (!days.has(ymd(d))) d = addDays(d, -1);
+  for (let i = 0; i < 1000; i++, d = addDays(d, -1)) {
+    if (days.has(ymd(d))) current++;
+    else if (isTraining(d)) break;
+  }
+  let best = 0, run = 0; d = parseYmd([...days].sort()[0]);
+  while (d <= today) {
+    if (days.has(ymd(d))) best = Math.max(best, ++run);
+    else if (isTraining(d) && ymd(d) !== ymd(today)) run = 0;
+    d = addDays(d, 1);
+  }
+  return { current, best: Math.max(best, current) };
+}
+const plural = (n, one, few, many) => n === 1 ? one : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? few : many;
+function statsHTML(full) {
+  const log = logAll(), { current, best } = streakInfo();
+  const mon = mondayOf(new Date());
+  const week = [0, 1, 2, 3, 4, 5, 6].map(i => planDay(addDays(mon, i))).filter(d => d.kind !== 'odpoczynek');
+  const weekDone = week.filter(d => dayDone(d.key, d.kind)).length;
+  const now = new Date(), monthKey = ymd(now).slice(0, 7);
+  const monthEs = log.filter(e => e.date.startsWith(monthKey));
+  return `<div class="stats">
+    <div class="stat fire"><b>🔥 ${current}</b><span>${plural(current, 'dzień', 'dni', 'dni')} z rzędu</span></div>
+    <div class="stat"><b>${weekDone}/${week.length}</b><span>w tym tygodniu</span></div>
+    ${full ? `<div class="stat"><b>${monthEs.length}</b><span>${plural(monthEs.length, 'trening', 'treningi', 'treningów')} w miesiącu</span></div>
+    <div class="stat"><b>${log.reduce((a, e) => a + (e.minutes || 0), 0)}</b><span>minut łącznie</span></div>
+    <div class="stat"><b>${log.length}</b><span>${plural(log.length, 'trening', 'treningi', 'treningów')} łącznie</span></div>
+    <div class="stat"><b>🏆 ${best}</b><span>najdłuższa seria</span></div>` : ''}
+  </div>`;
+}
+function entryHTML(e) {
+  const d = parseYmd(e.date);
+  return `<div class="card entry"><div class="dico k-bg-${e.kind}">${{ silowy:'💪', bieznia:'🏃‍♀️', rozciaganie:'🧘‍♀️', rozgrzewka:'🔥' }[e.kind] || '✓'}</div>
+    <div class="dtxt"><b>${esc(e.title)}</b><div class="small muted">${DNI_KR[d.getDay()]} ${fmtDate(d)} · ${e.minutes} min · ${KIND_NAMES[e.kind] || ''}${e.level != null && e.kind === 'silowy' ? ' · ' + LEVEL_NAMES[e.level] : ''}${e.manual ? ' · ręcznie' : ''}</div></div>
+    <button class="del" data-act="delEntry" data-ts="${e.ts}" aria-label="Usuń wpis">✕</button></div>`;
+}
+let logMonth = [new Date().getFullYear(), new Date().getMonth()];
+let logSel = ymd(new Date()), addKind = 'bieznia';
+actions.logMonth = el => { const d = new Date(logMonth[0], logMonth[1] + +el.dataset.d, 1); logMonth = [d.getFullYear(), d.getMonth()]; render(); };
+actions.logDay = el => { logSel = el.dataset.k; const d = parseYmd(logSel); logMonth = [d.getFullYear(), d.getMonth()]; render(); setTimeout(() => $('.cal').nextElementSibling.scrollIntoView({ behavior:'smooth' }), 50); };
+actions.addKind = el => { addKind = el.dataset.k; document.querySelectorAll('[data-act=addKind]').forEach(b => b.classList.toggle('on', b === el)); };
+actions.addEntry = () => {
+  const min = Math.max(1, Math.min(300, parseInt($('#addMin').value, 10) || 30));
+  const pd = planDay(parseYmd(logSel));
+  logAdd({ date: logSel, title: KIND_NAMES[addKind] + (addKind === 'bieznia' ? '' : ' – trening'), kind: addKind, minutes: min, manual: true, planKey: pd.kind === addKind ? logSel : null });
+  render();
+};
+actions.delEntry = el => {
+  if (!confirm('Usunąć ten wpis z dziennika?')) return;
+  store.set('log', logAll().filter(e => String(e.ts) !== el.dataset.ts)); render();
+};
+actions.exportData = () => {
+  const data = { app:'moj-trening', version:1, exported:new Date().toISOString(), log:logAll(), planStart:store.get('planStart'), firstUse:store.get('firstUse'), settings:store.get('settings', {}) };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type:'application/json' }));
+  a.download = `moj-trening-kopia-${ymd(new Date())}.json`; document.body.appendChild(a); a.click(); a.remove();
+};
+actions.importData = () => $('#importFile').click();
+function importData(ev) {
+  const f = ev.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (d.app !== 'moj-trening' || !Array.isArray(d.log)) throw new Error();
+      if (!confirm(`Wczytać kopię z ${d.exported.slice(0, 10)} (${d.log.length} wpisów)? Obecne dane zostaną zastąpione.`)) return;
+      store.set('log', d.log); if (d.planStart) store.set('planStart', d.planStart); if (d.firstUse) store.set('firstUse', d.firstUse); if (d.settings) store.set('settings', d.settings);
+      render(); alert('Gotowe – dane wczytane.');
+    } catch (e) { alert('To nie jest poprawny plik kopii aplikacji.'); }
+  };
+  r.readAsText(f);
+}
+
 /* =========================================================
    WIDOKI
    ========================================================= */
@@ -1070,7 +1185,50 @@ const views = {
       ${dayHeroHTML(d, done)}
       ${body}` };
   },
-  log() { return { title: 'Dziennik', html: `<div class="empty">Dziennik i kalendarz – etap 5.</div>` }; }
+  log() {
+    const log = logAll(), todayKey = ymd(new Date());
+    const byDay = {}; log.forEach(e => (byDay[e.date] = byDay[e.date] || []).push(e));
+    const [y, m] = logMonth, first = new Date(y, m, 1), startCell = addDays(first, -((first.getDay() + 6) % 7));
+    const cells = [];
+    for (let i = 0; i < 42; i++) {
+      const d = addDays(startCell, i), k = ymd(d);
+      if (i >= 35 && d.getMonth() !== m) break;
+      const es = byDay[k] || [], pd = planDay(d);
+      const planned = pd.kind !== 'odpoczynek' && pd.inPlan;
+      cells.push(`<button class="cal-d ${d.getMonth() !== m ? 'out' : ''} ${k === todayKey ? 'now' : ''} ${k === logSel ? 'sel' : ''} ${es.length ? 'has' : ''} ${planned && !es.length && k < todayKey && k >= firstUse() ? 'missed' : ''} ${planned && !es.length ? 'plan' : ''}" data-act="logDay" data-k="${k}">
+        <span>${d.getDate()}</span><i>${es.slice(0, 3).map(e => `<b class="k-${e.kind}"></b>`).join('')}</i></button>`);
+    }
+    const selDate = parseYmd(logSel), selEs = (byDay[logSel] || []);
+    const recent = [...log].sort((a, b) => b.date.localeCompare(a.date) || b.ts - a.ts).slice(0, 15);
+    return { title: 'Dziennik', html: `
+      ${statsHTML(true)}
+      <div class="card cal">
+        <div class="cal-h">
+          <button class="cal-nav" data-act="logMonth" data-d="-1" aria-label="Poprzedni miesiąc">‹</button>
+          <b>${MIESIACE[m][0].toUpperCase() + MIESIACE[m].slice(1)} ${y}</b>
+          <button class="cal-nav" data-act="logMonth" data-d="1" aria-label="Następny miesiąc">›</button>
+        </div>
+        <div class="cal-g">${['Pn','Wt','Śr','Cz','Pt','So','Nd'].map(d => `<span class="cal-w">${d}</span>`).join('')}${cells.join('')}</div>
+        <div class="legend small muted"><span><b class="k-silowy"></b>siłowy</span><span><b class="k-bieznia"></b>bieżnia</span><span><b class="k-rozciaganie"></b>rozciąganie</span><span><i class="lg-plan"></i>zaplanowany</span></div>
+      </div>
+      <h2>${esc(DNI[selDate.getDay()])}, ${fmtDate(selDate)}</h2>
+      ${selEs.length ? selEs.map(entryHTML).join('') : `<p class="muted">Brak zapisanych treningów tego dnia.${planDay(selDate).kind !== 'odpoczynek' ? ' W planie: ' + esc(planDay(selDate).title) + '.' : ''}</p>`}
+      <details class="card add"><summary><b>＋ Dodaj trening ręcznie</b></summary>
+        <div class="chips">${['bieznia','silowy','rozciaganie'].map((k, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="addKind" data-k="${k}">${KIND_NAMES[k]}</button>`).join('')}</div>
+        <label class="small muted" for="addMin">Czas (minuty)</label>
+        <input id="addMin" class="input" type="number" inputmode="numeric" min="1" max="300" value="30">
+        <button class="btn" data-act="addEntry">Zapisz na ${fmtDate(selDate)}</button>
+      </details>
+      <h2>Ostatnie treningi</h2>
+      ${recent.length ? recent.map(entryHTML).join('') : '<div class="empty">Tu pojawią się Twoje ukończone treningi. Do dzieła! 💪</div>'}
+      <h2>Kopia zapasowa</h2>
+      <div class="card small">
+        <p class="muted">Dane są zapisane tylko na tym telefonie. Co jakiś czas zrób kopię – przyda się przy zmianie telefonu lub czyszczeniu przeglądarki.</p>
+        <div class="row"><button class="btn sec" data-act="exportData">Zapisz kopię</button><button class="btn sec" data-act="importData">Wczytaj kopię</button></div>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>`,
+      after() { const f = $('#importFile'); if (f) f.onchange = importData; } };
+  }
 };
 
 /* =========================================================
